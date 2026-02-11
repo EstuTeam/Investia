@@ -26,16 +26,17 @@ from datetime import datetime, date
 import json
 import os
 
+from app.utils.logger import logger
+
 # Win Rate Booster'ı import et (opsiyonel)
 try:
     import sys
-    import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     from win_rate_booster import apply_win_rate_boosters, check_bullish_candlestick_patterns
     BOOSTER_AVAILABLE = True
 except ImportError:
     BOOSTER_AVAILABLE = False
-    print("⚠️ Win Rate Booster modülü yüklenemedi. Bonus özellikler devre dışı.")
+    logger.warning("Win Rate Booster modülü yüklenemedi. Bonus özellikler devre dışı.")
 
 
 class SignalType(Enum):
@@ -856,17 +857,12 @@ class HybridSignalGenerator:
         scanned = 0
         errors = []
         
-        print(f"\n📊 HYBRID V2+V3 TARAMA BAŞLADI")
-        print(f"📅 Tarih: {date.today().isoformat()}")
-        print(f"🎯 Market: {market_msg}")
-        print(f"🔢 Taranacak: {len(tickers)} hisse")
-        print(f"📈 Max Picks: {self.params.max_picks_per_day}/gün")
-        print("-" * 50)
+        logger.info(f"📊 HYBRID V2+V3 TARAMA BAŞLADI | Tarih: {date.today().isoformat()} | Market: {market_msg} | Hisse: {len(tickers)} | Max: {self.params.max_picks_per_day}/gün")
         
         for ticker in tickers:
             # Max picks kontrolü
             if not self._check_daily_limit():
-                print(f"\n✅ Günlük sinyal limiti doldu ({self.params.max_picks_per_day} sinyal)")
+                logger.info(f"Günlük sinyal limiti doldu ({self.params.max_picks_per_day} sinyal)")
                 break
             
             try:
@@ -896,8 +892,7 @@ class HybridSignalGenerator:
                 if signal.get('signal') == 'BUY':
                     signals.append(signal)
                     sector = self.SECTOR_MAP.get(ticker.replace('.IS', ''), 'Diğer')
-                    print(f"  ✅ {ticker}: Score {signal.get('strength', 0):.0f} | "
-                          f"TP1: ₺{signal.get('take_profit_1', 0):.2f} | Sektör: {sector}")
+                    logger.info(f"✅ {ticker}: Score {signal.get('strength', 0):.0f} | TP1: ₺{signal.get('take_profit_1', 0):.2f} | Sektör: {sector}")
                           
             except Exception as e:
                 errors.append(f"{ticker}: {str(e)[:30]}")
@@ -919,10 +914,7 @@ class HybridSignalGenerator:
             'errors': len(errors)
         }
         
-        print(f"\n{'='*50}")
-        print(f"📊 TARAMA SONUCU")
-        print(f"{'='*50}")
-        print(f"Taranan: {scanned} | Sinyal: {len(signals)} | Hata: {len(errors)}")
+        logger.info(f"📊 TARAMA SONUCU: Taranan: {scanned} | Sinyal: {len(signals)} | Hata: {len(errors)}")
         
         return {
             'date': date.today().isoformat(),
@@ -1104,25 +1096,5 @@ def simulate_hybrid_trade(
 
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("🎯 HYBRID STRATEGY - V2 + V3 EN İYİ ÖZELLİKLER")
-    print("=" * 70)
-    print("\n✅ V2'den Alınan (Güçlü Filtreler):")
-    print("   • Min Score: 75+ (yüksek kalite)")
-    print("   • Stop-Loss: Teknik seviyeler (~%2)")
-    print("   • Volume: Min 0.8x ortalama")
-    print("   • RSI: 35-65 optimal bölge")
-    print("\n🚀 V3'ten Alınan (Akıllı Çıkış):")
-    print("   • Partial Exit: TP1'de %50 pozisyon kapat")
-    print("   • İkinci Hedef: 1:4.0 R/R")
-    print("   • Break-even: TP1 sonrası stop=entry")
-    print("\n🎁 Bonus (Opsiyonel):")
-    print(f"   • Win Rate Booster: {'✅ Aktif' if BOOSTER_AVAILABLE else '❌ Yüklenmedi'}")
-    print("   • Candlestick Patterns")
-    print("   • Support/Resistance Quality")
-    print("   • Momentum Alignment")
-    print("\n📊 Beklenen Performans:")
-    print("   • Win Rate: %65-70+")
-    print("   • Profit Factor: 2.5-3.5")
-    print("   • Max Drawdown: 5-8%")
-    print("=" * 70)
+    logger.info("🎯 HYBRID STRATEGY - V2 + V3 | Min Score: 75+ | SL: Teknik ~%2 | TP1: 1:2.5 | TP2: 1:4.0 | Partial Exit: %50")
+    logger.info(f"Win Rate Booster: {'Aktif' if BOOSTER_AVAILABLE else 'Yüklenmedi'}")

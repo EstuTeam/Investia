@@ -9,6 +9,7 @@ import asyncio
 import pandas as pd
 from curl_cffi import requests as curl_requests
 from app.services.data_fetcher import DataFetcher
+from app.utils.logger import logger
 
 class MarketDataService:
     """Küresel piyasa verilerini çeken servis"""
@@ -51,7 +52,7 @@ class MarketDataService:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            print(f"Error fetching BIST index {ticker}: {e}")
+            logger.error(f"Error fetching BIST index {ticker}: {e}")
             return None
 
     def _fetch_yahoo_price(self, ticker: str) -> Optional[Dict]:
@@ -96,7 +97,7 @@ class MarketDataService:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            print(f"Error fetching {ticker}: {e}")
+            logger.error(f"Error fetching {ticker}: {e}")
             return None
     
     async def get_all_market_data(self) -> Dict:

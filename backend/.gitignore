@@ -122,3 +122,10 @@ tmp/
 temp/
 *.tmp
 *.temp
+
+# Sensitive / runtime state
+.env.save
+*.env.save
+nohup.out
+.hybrid_state.json
+app/services/.hybrid_state.json

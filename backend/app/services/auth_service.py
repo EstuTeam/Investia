@@ -3,7 +3,7 @@ Authentication Service
 JWT token management and password hashing with bcrypt
 """
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Union, Any, TYPE_CHECKING
+from typing import Optional, Any
 try:
     from jose import JWTError, jwt as jose_jwt
     jwt = jose_jwt

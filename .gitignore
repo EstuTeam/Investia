@@ -24,6 +24,13 @@ backend/**/__pycache__/
 backend/logs/
 *.pyc
 
+# Sensitive / runtime files
+*.env.save
+.env.save
+nohup.out
+.hybrid_state.json
+backend/app/services/.hybrid_state.json
+
 # IDE
 .idea/
 .vscode/
