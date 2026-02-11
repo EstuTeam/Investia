@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash screen theme -->
+    <style name="Theme.Investia.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/midas_dark_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Investia</item>
+    </style>
+
+    <!-- Main theme - Dark -->
+    <style name="Theme.Investia" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/midas_dark_bg</item>
+        <item name="android:windowBackground">@color/midas_dark_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

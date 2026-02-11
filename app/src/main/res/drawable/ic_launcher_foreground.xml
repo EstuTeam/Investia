@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- M letter for Midas -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,72V36l10,16 10,-16v36h-6V50l-4,8 -4,-8v22zM66,36h6v36h-6z" />
+
+    <!-- Stock chart arrow up -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M60,62l8,-12 8,12z"
+        android:strokeWidth="0" />
+</vector>

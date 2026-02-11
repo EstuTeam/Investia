@@ -1,0 +1,29 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build
+/app/release
+*.apk
+*.aab
+
+# Release keystore
+midas-release-key.jks
+
+# Backend
+backend/venv-system/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/**/__pycache__/
+backend/logs/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
