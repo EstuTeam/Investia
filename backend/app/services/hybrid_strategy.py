@@ -27,6 +27,7 @@ import json
 import os
 
 from app.utils.logger import logger
+from app.services.data_fetcher import DataFetcher
 
 # Win Rate Booster'ı import et (opsiyonel)
 try:
@@ -525,17 +526,14 @@ class HybridSignalGenerator:
             return True, "Market filtresi devre dışı"
         
         try:
-            # XU100 (BIST100) verisini çek - yf.Ticker kullan (download sunucuda çalışmıyor)
-            stock = yf.Ticker('XU100.IS')
-            try:
-                xu100 = stock.history(period='1mo', interval='1d', timeout=15)
-            except TypeError:
-                xu100 = stock.history(period='1mo', interval='1d')
+            # XU100 (BIST100) verisini DataFetcher üzerinden çek (cache + mock fallback)
+            fetcher = DataFetcher()
+            xu100 = fetcher.fetch_realtime_data('XU100.IS', interval='1d', period='1mo')
             
             if xu100 is None or xu100.empty or len(xu100) < 10:
                 return True, "BIST100 verisi alınamadı (filtre atlandı)"
             
-            close_col = 'Close' if 'Close' in xu100.columns else 'close'
+            close_col = 'close' if 'close' in xu100.columns else 'Close'
             close = xu100[close_col].values.flatten()
             
             # EMA10 ve EMA20 hesapla
@@ -871,19 +869,16 @@ class HybridSignalGenerator:
                 break
             
             try:
-                # Veri çek - yf.Ticker kullan (download sunucuda çalışmıyor)
-                stock = yf.Ticker(ticker)
-                try:
-                    df = stock.history(period=period, interval='1d', timeout=15)
-                except TypeError:
-                    df = stock.history(period=period, interval='1d')
+                # Veri çek - DataFetcher kullan (cache + mock fallback)
+                fetcher = DataFetcher()
+                df = fetcher.fetch_realtime_data(ticker, interval='1d', period=period)
                 
                 if df is None:
                     df = pd.DataFrame()
                 
-                # Column isimlerini standartlaştır
+                # Column isimlerini standartlaştır (DataFetcher lowercase döner)
                 if not df.empty and hasattr(df, 'columns'):
-                    df.columns = [c.capitalize() if c.islower() else c for c in df.columns]
+                    df.columns = [c.capitalize() for c in df.columns]
                 
                 if df.empty or len(df) < 50:
                     continue

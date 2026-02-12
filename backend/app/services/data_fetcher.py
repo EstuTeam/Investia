@@ -23,6 +23,7 @@ class DataFetcher:
     
     # Base prices for mock data generation (approximate real prices in TRY)
     MOCK_BASE_PRICES = {
+        # BIST Hisseleri
         "AKBNK.IS": 52.0,
         "AKSEN.IS": 28.0,
         "ARCLK.IS": 180.0,
@@ -52,6 +53,32 @@ class DataFetcher:
         "TRALT.IS": 42.0,
         "TUPRS.IS": 185.0,
         "YKBNK.IS": 32.0,
+        "HALKB.IS": 18.0,
+        "MGROS.IS": 420.0,
+        "SOKM.IS": 65.0,
+        "KOZAL.IS": 150.0,
+        "KOZAA.IS": 42.0,
+        "VESTL.IS": 38.0,
+        "AYGAZ.IS": 180.0,
+        "TTKOM.IS": 32.0,
+        # BIST Endeksler
+        "XU100.IS": 10000.0,
+        "XU030.IS": 12000.0,
+        # Döviz Çiftleri
+        "TRY=X": 36.5,         # USD/TRY
+        "USDTRY=X": 36.5,      # USD/TRY (alternatif)
+        "EURTRY=X": 38.2,      # EUR/TRY
+        # Emtia
+        "GC=F": 2900.0,        # Altın (USD)
+        "SI=F": 33.0,          # Gümüş (USD)
+        "CL=F": 72.0,          # Ham Petrol (USD)
+        # Kripto
+        "BTC-USD": 96000.0,    # Bitcoin
+        "ETH-USD": 2700.0,     # Ethereum
+        # Küresel Endeksler
+        "^GSPC": 6050.0,       # S&P 500
+        "^IXIC": 19500.0,      # NASDAQ
+        "^DJI": 44500.0,       # Dow Jones
     }
     
     def __init__(self):

@@ -55,27 +55,21 @@ class MarketDataService:
             return None
 
     def _fetch_yahoo_price(self, ticker: str) -> Optional[Dict]:
-        """Genel piyasa verilerini Yahoo Finance'tan çek (yf.Ticker ile)"""
+        """Genel piyasa verilerini DataFetcher üzerinden çek (yf.Ticker + cache + fallback)"""
         try:
-            stock = yf.Ticker(ticker)
-            try:
-                hist = stock.history(period="5d", interval="1d", timeout=15)
-            except TypeError:
-                hist = stock.history(period="5d", interval="1d")
-
-            if hist is None or hist.empty:
+            df = self.data_fetcher.fetch_realtime_data(ticker, interval="1d", period="5d")
+            if df is None or df.empty:
                 logger.warning(f"No data returned for {ticker}")
                 return None
 
-            # Column names: yf.Ticker returns capitalized columns
-            close_col = "Close" if "Close" in hist.columns else "close"
-            if close_col not in hist.columns:
-                # Try lowercase
-                hist.columns = hist.columns.str.capitalize()
-                close_col = "Close"
+            # DataFetcher returns lowercase column names
+            close_col = "close" if "close" in df.columns else "Close"
+            if close_col not in df.columns:
+                df.columns = df.columns.str.lower()
+                close_col = "close"
 
-            current_price = float(hist[close_col].iloc[-1])
-            previous_close = float(hist[close_col].iloc[-2]) if len(hist) > 1 else current_price
+            current_price = float(df[close_col].iloc[-1])
+            previous_close = float(df[close_col].iloc[-2]) if len(df) > 1 else current_price
             change = current_price - previous_close
             change_percent = (change / previous_close * 100) if previous_close else 0
 
