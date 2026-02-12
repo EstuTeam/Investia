@@ -14,7 +14,7 @@ local.properties
 *.aab
 
 # Release keystore
-midas-release-key.jks
+investia-release-key.jks
 
 # Backend
 backend/venv-system/
@@ -23,6 +23,12 @@ backend/app/__pycache__/
 backend/**/__pycache__/
 backend/logs/
 *.pyc
+
+# Environment / Secrets (NEVER commit these)
+.env
+backend/.env
+backend/.env.*
+!backend/.env.example
 
 # Sensitive / runtime files
 *.env.save

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investia - Logo Tasarımı</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a7b 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .logo-showcase {
+            display: flex;
+            gap: 60px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 40px;
+        }
+        
+        .logo-item {
+            text-align: center;
+        }
+        
+        .logo-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        svg {
+            filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+        }
+        
+        .app-preview {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            display: inline-block;
+            margin-top: 20px;
+        }
+        
+        .app-name {
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            margin-top: 15px;
+            letter-spacing: -0.5px;
+        }
+        
+        .app-tagline {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        
+        .download-note {
+            margin-top: 50px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 30px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-showcase">
+            <!-- iOS Boyutu - 1024x1024 -->
+            <div class="logo-item">
+                <div class="logo-label">iOS App Icon (1024x1024)</div>
+                <svg width="200" height="200" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#1a2332;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#2d3e50;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="lineGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#00d4aa;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Arka Plan - Yuvarlak -->
+                    <circle cx="512" cy="512" r="512" fill="url(#bgGradient)"/>
+                    
+                    <!-- Trend Çizgisi -->
+                    <path d="M 280 650 L 400 580 L 480 520 L 580 480 L 744 320" 
+                          fill="none" 
+                          stroke="url(#lineGradient)" 
+                          stroke-width="65" 
+                          stroke-linecap="round" 
+                          stroke-linejoin="round"/>
+                    
+                    <!-- Noktalar -->
+                    <circle cx="280" cy="650" r="45" fill="url(#lineGradient)"/>
+                    <circle cx="400" cy="580" r="40" fill="url(#lineGradient)"/>
+                    <circle cx="480" cy="520" r="38" fill="url(#lineGradient)"/>
+                    <circle cx="580" cy="480" r="38" fill="url(#lineGradient)"/>
+                    <circle cx="744" cy="320" r="50" fill="#00e5ff"/>
+                </svg>
+            </div>
+            
+            <!-- Android Boyutu - 512x512 -->
+            <div class="logo-item">
+                <div class="logo-label">Android App Icon (512x512)</div>
+                <svg width="200" height="200" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="bgGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#1a2332;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#2d3e50;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="lineGradient2" x1="0%" y1="100%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#00d4aa;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Arka Plan - Yuvarlak -->
+                    <circle cx="256" cy="256" r="256" fill="url(#bgGradient2)"/>
+                    
+                    <!-- Trend Çizgisi -->
+                    <path d="M 140 325 L 200 290 L 240 260 L 290 240 L 372 160" 
+                          fill="none" 
+                          stroke="url(#lineGradient2)" 
+                          stroke-width="32" 
+                          stroke-linecap="round" 
+                          stroke-linejoin="round"/>
+                    
+                    <!-- Noktalar -->
+                    <circle cx="140" cy="325" r="22" fill="url(#lineGradient2)"/>
+                    <circle cx="200" cy="290" r="20" fill="url(#lineGradient2)"/>
+                    <circle cx="240" cy="260" r="19" fill="url(#lineGradient2)"/>
+                    <circle cx="290" cy="240" r="19" fill="url(#lineGradient2)"/>
+                    <circle cx="372" cy="160" r="25" fill="#00e5ff"/>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="app-preview">
+            <!-- Logo Önizleme -->
+            <svg width="120" height="120" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="bgGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#1a2332;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#2d3e50;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="lineGradient3" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#00d4aa;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#00e5ff;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                
+                <circle cx="256" cy="256" r="256" fill="url(#bgGradient3)"/>
+                
+                <path d="M 140 325 L 200 290 L 240 260 L 290 240 L 372 160" 
+                      fill="none" 
+                      stroke="url(#lineGradient3)" 
+                      stroke-width="32" 
+                      stroke-linecap="round" 
+                      stroke-linejoin="round"/>
+                
+                <circle cx="140" cy="325" r="22" fill="url(#lineGradient3)"/>
+                <circle cx="200" cy="290" r="20" fill="url(#lineGradient3)"/>
+                <circle cx="240" cy="260" r="19" fill="url(#lineGradient3)"/>
+                <circle cx="290" cy="240" r="19" fill="url(#lineGradient3)"/>
+                <circle cx="372" cy="160" r="25" fill="#00e5ff"/>
+            </svg>
+            
+            <div class="app-name">Investia</div>
+            <div class="app-tagline">Akıllı Yatırım Platformu</div>
+        </div>
+        
+        <div class="download-note">
+            💡 Sağ tık yaparak logoları PNG olarak indirebilirsiniz
+        </div>
+    </div>
+</body>
+</html>

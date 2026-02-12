@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "50654626317",
+    "project_id": "investia-2251d",
+    "storage_bucket": "investia-2251d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:50654626317:android:04085e14e2803c7f2ccb44",
+        "android_client_info": {
+          "package_name": "com.investia.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBimSoKHQroZibbBBBtx6WKLk_uDnIY1CA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

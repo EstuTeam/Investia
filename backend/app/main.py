@@ -4,6 +4,7 @@ Trading Bot API Server
 """
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from app.config import settings
@@ -18,20 +19,42 @@ from app.services.ipo_service import ipo_service
 from app.services.ipo_scheduler import setup_ipo_scheduler, start_ipo_scheduler, stop_ipo_scheduler
 from app.services.stock_scheduler import setup_stock_scheduler, start_stock_scheduler, stop_stock_scheduler, stock_scheduler
 from app.services.websocket_manager import ws_manager
+from app.services.cache_service import cache_service
 from app.utils.logger import logger
 from datetime import datetime, timezone
 import asyncio
 import json
 import traceback
+import uuid
 
 # Create FastAPI app
 app = FastAPI(
     title="Trading Bot API",
     description="Algorithmic Trading Bot for BIST stocks with real-time technical analysis",
-    version="1.0.0",
+    version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Initialize Sentry for error tracking (if configured)
+if settings.sentry_dsn:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+        
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            integrations=[
+                FastApiIntegration(transaction_style="endpoint"),
+                SqlalchemyIntegration(),
+            ],
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            environment="production" if settings.is_production else "development",
+        )
+        logger.info("✅ Sentry error tracking initialized")
+    except ImportError:
+        logger.warning("⚠️ sentry-sdk not installed, skipping Sentry init")
 
 # Global Exception Handlers
 @app.exception_handler(Exception)
@@ -57,14 +80,27 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={"detail": exc.errors()}
     )
 
-# Configure CORS
+
+# Request ID middleware for log correlation
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    """Add unique request ID for log correlation"""
+    request_id = request.headers.get("X-Request-Id", str(uuid.uuid4())[:8])
+    response = await call_next(request)
+    response.headers["X-Request-Id"] = request_id
+    return response
+
+# Configure CORS (allow all origins for mobile app access)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip compression for responses > 500 bytes
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Configure Rate Limiting
 app.add_middleware(
@@ -75,7 +111,7 @@ app.add_middleware(
     enabled=settings.rate_limit_enabled
 )
 
-# Include routers
+# Include routers - primary /api prefix (current mobile app uses this)
 app.include_router(auth.router, prefix="/api")  # Auth routes first
 app.include_router(portfolio.router, prefix="/api")  # Portfolio routes
 app.include_router(stocks.router, prefix="/api")
@@ -89,6 +125,21 @@ app.include_router(chat.router, prefix="/api")
 app.include_router(ipo.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(market.router, prefix="/api")
+
+# Versioned API alias - /api/v1 (future-proofing, same handlers)
+app.include_router(auth.router, prefix="/api/v1")
+app.include_router(portfolio.router, prefix="/api/v1")
+app.include_router(stocks.router, prefix="/api/v1")
+app.include_router(signals.router, prefix="/api/v1")
+app.include_router(backtest.router, prefix="/api/v1")
+app.include_router(indicators.router, prefix="/api/v1")
+app.include_router(screener.router, prefix="/api/v1")
+app.include_router(alerts.router, prefix="/api/v1")
+app.include_router(news.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+app.include_router(ipo.router, prefix="/api/v1")
+app.include_router(ai.router, prefix="/api/v1")
+app.include_router(market.router, prefix="/api/v1")
 
 # Include WebSocket routes
 app.include_router(ws_routes.router, tags=["WebSocket"])
@@ -116,17 +167,9 @@ async def stock_scan_callback():
     """Günlük hisse taraması (scheduler tarafından çağrılır - 18:30)"""
     try:
         from app.services.hybrid_strategy import HybridSignalGenerator
+        from app.constants import BIST30_TICKERS
         
         logger.info("📊 Stock Scheduler: Running daily scan...")
-        
-        BIST30 = [
-            "AKBNK.IS", "AKSEN.IS", "ARCLK.IS", "ASELS.IS", "BIMAS.IS",
-            "EKGYO.IS", "ENKAI.IS", "EREGL.IS", "FROTO.IS", "GARAN.IS",
-            "GUBRF.IS", "HEKTS.IS", "ISCTR.IS", "KCHOL.IS", "KRDMD.IS",
-            "ODAS.IS", "PETKM.IS", "PGSUS.IS", "SAHOL.IS", "SASA.IS",
-            "SISE.IS", "TAVHL.IS", "TCELL.IS", "THYAO.IS", "TKFEN.IS",
-            "TOASO.IS", "TUPRS.IS", "YKBNK.IS", "VAKBN.IS"
-        ]
         
         hybrid_generator = HybridSignalGenerator()
         
@@ -139,7 +182,7 @@ async def stock_scan_callback():
         
         # V2+V3 Hybrid tarama
         result = hybrid_generator.scan_all_stocks(
-            tickers=BIST30,
+            tickers=BIST30_TICKERS,
             period='3mo',
             apply_booster=True,
             force_run=True
@@ -178,7 +221,7 @@ async def stock_scan_callback():
             "picks": picks,
             "market_warnings": market_warnings,
             "market_ok": market_ok,
-            "total_scanned": len(BIST30)
+            "total_scanned": len(BIST30_TICKERS)
         }
         
         logger.info(f"📊 Stock Scheduler: Scan completed - {len(picks)} picks")
@@ -202,6 +245,10 @@ async def startup_event():
     try:
         init_db()
         logger.info("Database tables initialized")
+        
+        # Ensure chat default rooms after tables are created
+        from app.services.chat_service import chat_service
+        chat_service._lazy_ensure_rooms()
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
     
@@ -255,17 +302,19 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint with database status"""
+    """Comprehensive health check with dependency status"""
     from app.models.base import check_db_connection
     
     db_healthy = check_db_connection()
+    cache_stats = cache_service.get_stats()
     
     return {
         "status": "healthy" if db_healthy else "degraded",
         "service": "trading-bot-api",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "database": "connected" if db_healthy else "disconnected",
-        "timestamp": datetime.now(timezone.utc).isoformat() if 'datetime' in dir() else None
+        "cache": cache_stats,
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 

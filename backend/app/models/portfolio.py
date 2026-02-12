@@ -4,7 +4,7 @@ SQLAlchemy models for user portfolios and transactions
 """
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, 
-    Text, Enum as SQLEnum, ForeignKey
+    Text, Enum as SQLEnum, ForeignKey, Index
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -59,6 +59,9 @@ class PortfolioTransaction(Base):
     Records buy/sell transactions
     """
     __tablename__ = "portfolio_transactions"
+    __table_args__ = (
+        Index('ix_portfolio_transactions_portfolio_ticker', 'portfolio_id', 'ticker'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     portfolio_id = Column(Integer, ForeignKey("portfolios.id", ondelete="CASCADE"), index=True)

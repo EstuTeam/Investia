@@ -61,14 +61,18 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     
+    # Monitoring
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = 0.1  # 10% of requests
+    
     # Rate Limiting - Relaxed for serverless
     rate_limit_enabled: bool = not os.getenv("VERCEL", False)  # Disable on Vercel
     rate_limit_per_minute: int = 120
     rate_limit_per_hour: int = 3000
     rate_limit_burst: int = 30
     
-    # Security - Must change in production
-    secret_key: str = "your-secret-key-change-in-production"
+    # Security - MUST be set via .env in production
+    secret_key: str = "CHANGE-ME-GENERATE-WITH-openssl-rand-hex-32"
     jwt_algorithm: str = "HS256"
     jwt_expiration_hours: int = 24
     jwt_refresh_days: int = 30

@@ -3,12 +3,13 @@ WebSocket Routes for Real-time Data Streaming
 Handles WebSocket connections for prices, signals, alerts, and notifications
 """
 import asyncio
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends
 from typing import Optional, List
 from app.services.websocket_manager import ws_manager, ChannelType, WebSocketMessage
 from app.services.data_fetcher import DataFetcher
 from app.services.technical_analysis import TechnicalAnalysis
 from app.services.signal_generator import SignalGenerator
+from app.api.routes.auth import get_current_user_required
 from app.utils.logger import logger
 
 router = APIRouter()
@@ -295,13 +296,14 @@ async def websocket_notifications(
         ws_manager.disconnect(websocket)
 
 
-# HTTP endpoints for broadcasting (admin/internal use)
+# HTTP endpoints for broadcasting (admin/internal use - auth required)
 @router.post("/ws/broadcast/notification")
 async def broadcast_notification(
     title: str,
     body: str,
     type: str = "info",
-    user_id: Optional[str] = None
+    user_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user_required)
 ):
     """
     Send a notification to all connected clients (or specific user)

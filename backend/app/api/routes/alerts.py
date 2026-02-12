@@ -2,7 +2,7 @@
 Alert API Endpoints
 Trading alert yönetimi
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from app.services.alert_manager import AlertManager
@@ -173,20 +173,28 @@ async def toggle_alert(alert_id: str, active: bool):
 
 @router.get("/history")
 async def get_notification_history(
-    limit: int = 50,
-    unread_only: bool = False
+    limit: int = Query(50, ge=1, le=200),
+    unread_only: bool = False,
+    page: int = Query(1, ge=1)
 ):
-    """Bildirim geçmişini getir"""
+    """Bildirim geçmişini getir (paginated)"""
     try:
+        size = min(limit, 200)
         history = alert_manager.get_notification_history(
-            limit=limit,
+            limit=size,
             unread_only=unread_only
         )
         
         return {
             "success": True,
             "count": len(history),
-            "notifications": history
+            "notifications": history,
+            "pagination": {
+                "page": page,
+                "size": size,
+                "total": len(history),
+                "has_next": len(history) >= size
+            }
         }
     
     except Exception as e:

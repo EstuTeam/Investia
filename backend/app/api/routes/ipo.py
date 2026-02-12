@@ -1,11 +1,12 @@
 """
 IPO API Routes - Halka Arz endpointleri
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from app.services.ipo_service import ipo_service
 from app.services.ipo_scheduler import get_scheduler
+from app.api.routes.auth import get_current_user_required
 
 router = APIRouter(prefix="/ipo", tags=["IPO - Halka Arz"])
 
@@ -41,8 +42,8 @@ class IPOAddRequest(BaseModel):
 # ============ ADMIN ENDPOİNTLERİ (/{ipo_id}'den ÖNCE tanımlanmalı!) ============
 
 @router.get("/admin/status")
-async def get_update_status():
-    """Güncelleme durumunu getir"""
+async def get_update_status(current_user: dict = Depends(get_current_user_required)):
+    """Güncelleme durumunu getir (Admin)"""
     status = ipo_service.get_update_status()
     scheduler = get_scheduler()
     scheduler_status = scheduler.get_status()
@@ -55,8 +56,8 @@ async def get_update_status():
 
 
 @router.post("/admin/refresh")
-async def refresh_ipo_data():
-    """Web'den IPO verilerini güncelle (manuel tetikleme)"""
+async def refresh_ipo_data(current_user: dict = Depends(get_current_user_required)):
+    """Web'den IPO verilerini güncelle (Admin - manuel tetikleme)"""
     try:
         result = await ipo_service.refresh_data_async()
         return {
@@ -69,8 +70,8 @@ async def refresh_ipo_data():
 
 
 @router.post("/admin/trigger-update")
-async def trigger_scheduler_update():
-    """Scheduler'ı manuel tetikle"""
+async def trigger_scheduler_update(current_user: dict = Depends(get_current_user_required)):
+    """Scheduler'ı manuel tetikle (Admin)"""
     scheduler = get_scheduler()
     success = scheduler.trigger_manual_update()
     
@@ -84,8 +85,8 @@ async def trigger_scheduler_update():
 
 
 @router.post("/admin/add")
-async def add_ipo_manually(request: IPOAddRequest):
-    """Manuel olarak yeni IPO ekle"""
+async def add_ipo_manually(request: IPOAddRequest, current_user: dict = Depends(get_current_user_required)):
+    """Manuel olarak yeni IPO ekle (Admin)"""
     ipo_data = request.model_dump()
     ipo_id = ipo_service.add_ipo_manually(ipo_data)
     
@@ -100,8 +101,8 @@ async def add_ipo_manually(request: IPOAddRequest):
 
 
 @router.post("/admin/save")
-async def save_data():
-    """Verileri JSON'a kaydet"""
+async def save_data(current_user: dict = Depends(get_current_user_required)):
+    """Verileri JSON'a kaydet (Admin)"""
     success = ipo_service.force_save()
     
     return {
@@ -111,8 +112,8 @@ async def save_data():
 
 
 @router.get("/admin/scheduler-jobs")
-async def get_scheduler_jobs():
-    """Scheduler job'larını listele"""
+async def get_scheduler_jobs(current_user: dict = Depends(get_current_user_required)):
+    """Scheduler job'larını listele (Admin)"""
     scheduler = get_scheduler()
     status = scheduler.get_status()
     
@@ -127,8 +128,8 @@ async def get_scheduler_jobs():
 
 
 @router.delete("/admin/delete/{ipo_id}")
-async def delete_ipo(ipo_id: str):
-    """IPO'yu sil"""
+async def delete_ipo(ipo_id: str, current_user: dict = Depends(get_current_user_required)):
+    """IPO'yu sil (Admin)"""
     success = ipo_service.delete_ipo(ipo_id)
     
     if success:

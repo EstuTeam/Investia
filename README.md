@@ -1,4 +1,4 @@
-# Midas Trading - Android App
+# Investia - Android App
 
 ## 🏗️ Mimari
 - **Kotlin** + **Jetpack Compose** (Material 3)
@@ -10,15 +10,15 @@
 
 ## 📁 Proje Yapısı
 ```
-com.midastrading.app/
-├── MidasApp.kt                      # Application class
+com.investia.app/
+├── InvestiaApp.kt                      # Application class
 ├── di/                               # Dependency Injection
 │   ├── AppModule.kt
 │   └── NetworkModule.kt
 ├── data/
 │   ├── local/TokenManager.kt        # DataStore auth token
 │   ├── remote/
-│   │   ├── MidasApiService.kt       # Retrofit API
+│   │   ├── InvestiaApiService.kt       # Retrofit API
 │   │   └── dto/Dtos.kt              # API response models
 │   └── repository/                   # Repository implementations
 ├── domain/
@@ -77,8 +77,8 @@ com.midastrading.app/
 | Profil | ✅ Hazır |
 
 ## 🎨 Design System
-- Material 3 + Custom Midas theme
+- Material 3 + Custom Investia theme
 - Dark/Light mode support
-- Midas brand color: `#4959EA`
+- Investia brand color: `#4959EA`
 - Finance colors: Green (#10B981) / Red (#EF4444)
 - Score badges, Signal chips, PnL text components

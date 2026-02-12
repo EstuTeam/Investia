@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from app.utils.logger import logger
+from app.services.cache_service import cache_service
 import time
 import os
 import random
@@ -377,7 +378,7 @@ class DataFetcher:
     
     def get_current_price(self, ticker: str) -> Optional[float]:
         """
-        Get current price for a ticker
+        Get current price for a ticker (with cache)
         
         Args:
             ticker: Stock ticker symbol
@@ -385,6 +386,12 @@ class DataFetcher:
         Returns:
             Current price or None if unavailable
         """
+        # Check centralized cache first (60s TTL for prices)
+        cache_key = f"price:{ticker}"
+        cached = cache_service.get(cache_key)
+        if cached is not None:
+            return cached
+
         try:
             stock = yf.Ticker(ticker)
             info = stock.info
@@ -393,8 +400,11 @@ class DataFetcher:
             price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
             
             if price:
+                price = float(price)
+                # Cache for 60 seconds
+                cache_service.set(cache_key, price, ttl=60)
                 logger.info(f"Current price for {ticker}: {price}")
-                return float(price)
+                return price
             else:
                 logger.warning(f"No current price available for {ticker}")
                 return None
@@ -405,11 +415,16 @@ class DataFetcher:
     
     def get_market_status(self) -> Dict[str, Any]:
         """
-        Get market status (simplified version)
+        Get market status (simplified version, cached)
         
         Returns:
             Dictionary with market status information
         """
+        # Check cache (30s TTL)
+        cached = cache_service.get("market_status")
+        if cached is not None:
+            return cached
+
         try:
             # Get BIST 100 index as market indicator
             bist = yf.Ticker("XU100.IS")
@@ -423,6 +438,7 @@ class DataFetcher:
             }
             
             logger.info("Market status retrieved")
+            cache_service.set("market_status", status, ttl=30)
             return status
             
         except Exception as e:

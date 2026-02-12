@@ -107,7 +107,8 @@ def init_db():
     Call this on application startup
     """
     # Import all models to register them with Base
-    from app.models import user, portfolio
+    from app.models import user, portfolio, alert, chat
+    from app.services import email_service  # VerificationToken model
     
     try:
         Base.metadata.create_all(bind=engine)

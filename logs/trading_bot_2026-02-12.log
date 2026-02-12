@@ -1,0 +1,40 @@
+2026-02-12 16:40:07 | INFO     | app.services.cache_service:__init__:54 - 📦 Using in-memory cache (Redis disabled)
+2026-02-12 16:40:07 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:07 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:07 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:07 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:07 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:07 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:07 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:07 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:07 | INFO     | app.services.stock_screener:__init__:86 - StockScreener initialized - Optimized Hybrid Strategy v4 (WR:57%, PF:1.94)
+2026-02-12 16:40:07 | INFO     | app.services.strategy_tester:__init__:22 - StrategyTester initialized
+2026-02-12 16:40:07 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:07 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:07 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:07 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:07 | INFO     | app.services.stock_screener:__init__:86 - StockScreener initialized - Optimized Hybrid Strategy v4 (WR:57%, PF:1.94)
+2026-02-12 16:40:07 | INFO     | app.models.base:_init_database:45 - Using SQLite database for development
+2026-02-12 16:40:08 | INFO     | app.services.alert_manager:__init__:29 - AlertManager initialized (DB-backed)
+2026-02-12 16:40:08 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:08 | INFO     | app.services.chat_service:__init__:31 - ChatService initialized (DB-backed)
+2026-02-12 16:40:08 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:08 | INFO     | app.services.websocket_manager:__init__:92 - AdvancedWebSocketManager initialized
+2026-02-12 16:40:08 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:08 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:08 | INFO     | app.services.data_fetcher:__init__:96 - DataFetcher initialized (mock_data=False)
+2026-02-12 16:40:08 | INFO     | app.services.technical_analysis:__init__:16 - TechnicalAnalysis initialized (native implementation)
+2026-02-12 16:40:08 | INFO     | app.main:startup_event:238 - ==================================================
+2026-02-12 16:40:08 | INFO     | app.main:startup_event:239 - Trading Bot API Starting...
+2026-02-12 16:40:08 | INFO     | app.main:startup_event:240 - Environment: INFO
+2026-02-12 16:40:08 | INFO     | app.main:startup_event:241 - CORS Origins: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000', 'https://fin-app-bay.vercel.app']
+2026-02-12 16:40:08 | INFO     | app.main:startup_event:242 - ==================================================
+2026-02-12 16:40:09 | INFO     | app.models.base:init_db:115 - Database tables created/verified successfully
+2026-02-12 16:40:09 | INFO     | app.main:startup_event:247 - Database tables initialized
+2026-02-12 16:40:09 | INFO     | app.main:startup_event:259 - IPO Auto-Update Scheduler started
+2026-02-12 16:40:09 | INFO     | app.main:startup_event:267 - 📊 Stock Scheduler started - Daily scan at 18:30
+2026-02-12 16:40:14 | INFO     | app.main:ipo_update_callback:156 - IPO Scheduler: Running automatic update...
+2026-02-12 16:40:35 | INFO     | app.main:ipo_update_callback:158 - IPO Scheduler: Update completed - {'success': True, 'sources_tried': ['cache'], 'ipos_found': 10, 'ipos_updated': 10, 'errors': ['Web kaynakları erişilemedi, mevcut 10 IPO verisi kullanılıyor'], 'news_found': 0, 'web_ipos_found': 0, 'cache_ipos': 10, 'manual_ipos': 0, 'new_ipos': 0}
+2026-02-12 16:40:37 | INFO     | app.main:shutdown_event:275 - Trading Bot API Shutting down...
+2026-02-12 16:40:37 | INFO     | app.main:shutdown_event:280 - IPO Scheduler stopped
+2026-02-12 16:40:37 | INFO     | app.main:shutdown_event:287 - 📊 Stock Scheduler stopped

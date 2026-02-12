@@ -30,8 +30,8 @@
 # ============================================================
 # Gson
 # ============================================================
--keep class com.midastrading.app.data.remote.dto.** { *; }
--keep class com.midastrading.app.domain.model.** { *; }
+-keep class com.investia.app.data.remote.dto.** { *; }
+-keep class com.investia.app.domain.model.** { *; }
 -keepclassmembers class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }

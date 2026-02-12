@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: investia-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./trading_bot.db
+      - key: PYTHONPATH
+        value: /opt/render/project/src/backend
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRATION_HOURS
+        value: "24"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        value: "*"
+    rootDir: backend
+    plan: free
+    healthCheckPath: /

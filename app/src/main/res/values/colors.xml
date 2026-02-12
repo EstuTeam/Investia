@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="midas_primary">#FF6366F1</color>
-    <color name="midas_dark_bg">#FF060912</color>
-    <color name="midas_surface">#FF0F172A</color>
-    <color name="midas_accent">#FF06B6D4</color>
-    <color name="midas_secondary">#FF8B5CF6</color>
+    <color name="investia_primary">#FF6366F1</color>
+    <color name="investia_dark_bg">#FF060912</color>
+    <color name="investia_surface">#FF0F172A</color>
+    <color name="investia_accent">#FF06B6D4</color>
+    <color name="investia_secondary">#FF8B5CF6</color>
     <color name="white">#FFFFFFFF</color>
     <color name="black">#FF000000</color>
 </resources>

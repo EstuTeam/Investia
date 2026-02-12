@@ -1,4 +1,4 @@
-# 📱 Midas Trading - Mobil Uygulama Referans Belgesi
+# 📱 Investia - Mobil Uygulama Referans Belgesi
 
 > Web versiyonundan alınan kritik bilgiler ve mobil uygulama mevcut durumu
 
@@ -214,7 +214,7 @@ YKBNK.IS — Bankacılık
 - **DTOs:** Tüm API response modelleri (`Dtos.kt`)
 - **Domain Models:** StockPick, StockQuote, DailyPicksResponse, PortfolioItem, NewsItem, SignalData, MarketOverview, ChatMessage, AuthUser
 - **Repositories:** `MarketRepository`, `AuthRepository` (interface + impl)
-- **API Service:** `MidasApiService` (Retrofit interface)
+- **API Service:** `InvestiaApiService` (Retrofit interface)
 
 #### Ekranlar (Compose)
 | Ekran | Dosya | Durum |
@@ -241,7 +241,7 @@ YKBNK.IS — Bankacılık
 - **Dark Mode** (varsayılan, web ile aynı)
 - Light Mode desteği hazır
 - Material3 color scheme
-- Custom renk paleti: MidasPrimary, MidasSecondary, GainGreen, LossRed vb.
+- Custom renk paleti: InvestiaPrimary, InvestiaSecondary, GainGreen, LossRed vb.
 
 #### Build
 - **Min SDK:** 26 (Android 8.0)
@@ -293,14 +293,14 @@ YKBNK.IS — Bankacılık
 ### 📂 MOBİL PROJE YAPISI
 
 ```
-mobile/app/src/main/java/com/midastrading/app/
-├── MidasApp.kt                          # Application class (Hilt)
+mobile/app/src/main/java/com/investiatrading/app/
+├── InvestiaApp.kt                          # Application class (Hilt)
 ├── data/
 │   ├── local/
 │   │   ├── CacheManager.kt             # In-memory TTL cache
 │   │   └── TokenManager.kt             # DataStore token yönetimi
 │   ├── remote/
-│   │   ├── MidasApiService.kt          # Retrofit API interface
+│   │   ├── InvestiaApiService.kt          # Retrofit API interface
 │   │   └── dto/
 │   │       └── Dtos.kt                 # Tüm DTO sınıfları
 │   └── repository/
@@ -321,7 +321,7 @@ mobile/app/src/main/java/com/midastrading/app/
 │   │   └── CommonComponents.kt       # Paylaşılan UI bileşenleri
 │   ├── navigation/
 │   │   ├── BottomBar.kt              # Alt navigasyon
-│   │   ├── MidasNavHost.kt           # Tüm navigasyon
+│   │   ├── InvestiaNavHost.kt           # Tüm navigasyon
 │   │   └── Screen.kt                 # Route tanımları
 │   ├── screens/
 │   │   ├── auth/         → LoginScreen, RegisterScreen
@@ -355,7 +355,7 @@ mobile/app/src/main/java/com/midastrading/app/
 |------|---------|--------------|
 | Ana arka plan | `#0F1019` | `DarkBg` |
 | Surface | `#161827` | `DarkSurface` |
-| Primary | `#6C63FF` | `MidasPrimary` |
+| Primary | `#6C63FF` | `InvestiaPrimary` |
 | Yeşil (kazanç) | `#00C853` | `GainGreen` |
 | Kırmızı (kayıp) | `#FF1744` | `LossRed` |
 | Ana metin | `#F1F5F9` | `TextPrimary` |

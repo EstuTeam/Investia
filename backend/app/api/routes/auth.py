@@ -16,6 +16,11 @@ from app.services.auth_service import (
     create_access_token, create_refresh_token, decode_token,
     update_user_profile, change_password, user_to_dict
 )
+from app.services.token_blacklist import token_blacklist
+from app.services.email_service import (
+    generate_verification_token, verify_token as verify_email_token,
+    mark_user_verified, reset_user_password
+)
 from app.config import settings
 from app.utils.logger import logger
 
@@ -32,6 +37,22 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 
+class EmailVerifyRequest(BaseModel):
+    """Email verification token submission"""
+    token: str
+
+
+class PasswordResetRequest(BaseModel):
+    """Request password reset"""
+    email: str
+
+
+class PasswordResetConfirm(BaseModel):
+    """Confirm password reset with token"""
+    token: str
+    new_password: str
+
+
 # ============ Dependency Functions ============
 
 async def get_current_user(
@@ -43,6 +64,10 @@ async def get_current_user(
     Returns None if not authenticated (for optional auth)
     """
     if not token:
+        return None
+    
+    # Check if token is blacklisted (logged out)
+    if token_blacklist.is_blacklisted(token):
         return None
     
     token_data = decode_token(token)
@@ -75,6 +100,14 @@ async def get_current_user_required(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Oturum açmanız gerekiyor",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Check if token is blacklisted (logged out)
+    if token_blacklist.is_blacklisted(token):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Oturum süresi dolmuş, lütfen tekrar giriş yapın",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -360,13 +393,15 @@ async def change_user_password(
 
 @router.post("/logout", response_model=dict)
 async def logout(
+    token: Optional[str] = Depends(oauth2_scheme),
     current_user: dict = Depends(get_current_user_required)
 ):
     """
-    Logout current user
-    Note: JWT tokens are stateless, so we just return success
-    Client should remove the token from storage
+    Logout current user - blacklists the JWT token
     """
+    if token:
+        token_blacklist.blacklist_token(token)
+    
     logger.info(f"User logged out: {current_user['email']}")
     
     return {
@@ -376,7 +411,7 @@ async def logout(
 
 
 @router.get("/verify", response_model=dict)
-async def verify_token(
+async def verify_token_endpoint(
     current_user: dict = Depends(get_current_user_required)
 ):
     """
@@ -387,4 +422,167 @@ async def verify_token(
         "success": True,
         "valid": True,
         "user": current_user
+    }
+
+
+# ============ Email Verification Endpoints ============
+
+@router.post("/send-verification", response_model=dict)
+async def send_verification_email(
+    current_user: dict = Depends(get_current_user_required)
+):
+    """
+    Generate an email verification token.
+    In production, this would send an email.
+    For now, returns the token directly (for mobile app flow).
+    """
+    if current_user.get("isVerified"):
+        return {
+            "success": True,
+            "message": "E-posta zaten doğrulanmış"
+        }
+    
+    try:
+        token = generate_verification_token(
+            email=current_user["email"],
+            token_type="email_verify",
+            expiry_hours=24
+        )
+        
+        # TODO: Send actual email in production
+        # For now, return token directly for mobile app testing
+        return {
+            "success": True,
+            "message": "Doğrulama kodu gönderildi",
+            "data": {
+                "verification_token": token,
+                "expires_in": 86400  # 24 hours
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error sending verification: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Doğrulama kodu gönderilemedi"
+        )
+
+
+@router.post("/verify-email", response_model=dict)
+async def verify_email(request: EmailVerifyRequest):
+    """
+    Verify email with the provided token
+    """
+    email = verify_email_token(request.token, token_type="email_verify")
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz veya süresi dolmuş doğrulama kodu"
+        )
+    
+    success = mark_user_verified(email)
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Kullanıcı bulunamadı"
+        )
+    
+    return {
+        "success": True,
+        "message": "E-posta başarıyla doğrulandı"
+    }
+
+
+# ============ Password Reset Endpoints ============
+
+@router.post("/forgot-password", response_model=dict)
+async def forgot_password(
+    request: PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Request a password reset token.
+    Always returns success to prevent email enumeration.
+    """
+    user = get_user_by_email(db, request.email)
+    
+    if user:
+        try:
+            token = generate_verification_token(
+                email=request.email,
+                token_type="password_reset",
+                expiry_hours=1
+            )
+            
+            # TODO: Send actual email in production
+            logger.info(f"Password reset requested for {request.email}")
+            
+            # For mobile app testing, return token directly
+            return {
+                "success": True,
+                "message": "Şifre sıfırlama kodu gönderildi",
+                "data": {
+                    "reset_token": token,
+                    "expires_in": 3600  # 1 hour
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error generating reset token: {e}")
+    
+    # Always return success (prevent email enumeration)
+    return {
+        "success": True,
+        "message": "Şifre sıfırlama kodu gönderildi"
+    }
+
+
+@router.post("/reset-password", response_model=dict)
+async def reset_password(request: PasswordResetConfirm):
+    """
+    Reset password with the provided token
+    """
+    import re
+    
+    # Validate new password
+    if len(request.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Şifre en az 8 karakter olmalıdır"
+        )
+    if not re.search(r'[a-z]', request.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Şifre en az bir küçük harf içermelidir"
+        )
+    if not re.search(r'[A-Z]', request.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Şifre en az bir büyük harf içermelidir"
+        )
+    if not re.search(r'\d', request.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Şifre en az bir rakam içermelidir"
+        )
+    
+    email = verify_email_token(request.token, token_type="password_reset")
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Geçersiz veya süresi dolmuş sıfırlama kodu"
+        )
+    
+    success = reset_user_password(email, request.new_password)
+    
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Kullanıcı bulunamadı"
+        )
+    
+    return {
+        "success": True,
+        "message": "Şifre başarıyla sıfırlandı"
     }

@@ -4,7 +4,9 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
+    id("com.google.firebase.firebase-perf")
     kotlin("kapt")
 }
 
@@ -15,11 +17,11 @@ val localProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.midastrading.app"
+    namespace = "com.investia.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.midastrading.app"
+        applicationId = "com.investia.app"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -36,7 +38,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(localProperties.getProperty("RELEASE_STORE_FILE", "../midas-release-key.jks"))
+            storeFile = file(localProperties.getProperty("RELEASE_STORE_FILE", "../investia-release-key.jks"))
             storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
             keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS", "")
             keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
@@ -45,8 +47,8 @@ android {
 
     buildTypes {
         debug {
-            // Telefon için production URL; emulator için http://10.0.2.2:8000 yapın
-            buildConfigField("String", "API_BASE_URL", "\"https://trading-botu.vercel.app\"")
+            // Lokal backend (aynı Wi-Fi ağındaki telefon için)
+            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.187:8000\"")
         }
         release {
             isMinifyEnabled = true
@@ -129,6 +131,9 @@ dependencies {
     // Security - Encrypted SharedPreferences for token storage
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
+    // Biometric authentication
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
@@ -143,6 +148,13 @@ dependencies {
 
     // WorkManager for background notification polling
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:32.7.1"))
+    implementation("com.google.firebase:firebase-crashlytics-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-perf-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

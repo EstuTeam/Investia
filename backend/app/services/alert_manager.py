@@ -1,15 +1,18 @@
 """
 Alert Manager Service
-Trading alert sistemi - price, score, signal alerts
+Trading alert sistemi - DB-backed persistent alerts
 """
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 import uuid
+from sqlalchemy.orm import Session
+from app.models.alert import Alert, Notification
+from app.models.base import SessionLocal
 from app.utils.logger import logger
 
 
 class AlertManager:
-    """Trading alert yönetimi"""
+    """Trading alert yonetimi — DB-backed"""
     
     _instance = None
     
@@ -22,31 +25,32 @@ class AlertManager:
     def __init__(self):
         if self._initialized:
             return
-        
-        # In-memory storage (production'da Redis veya DB kullan)
-        self.alerts: Dict[str, Dict[str, Any]] = {}
-        self.triggered_alerts: List[Dict[str, Any]] = []
-        self.notification_history: List[Dict[str, Any]] = []  # Bildirim geçmişi
-        self.max_history = 100  # Maksimum kayıt sayısı
         self._initialized = True
-        logger.info("AlertManager initialized")
+        logger.info("AlertManager initialized (DB-backed)")
+    
+    def _get_db(self) -> Session:
+        """Get a new database session"""
+        return SessionLocal()
     
     def create_alert(
         self,
         alert_type: str,
         ticker: str,
         condition: Dict[str, Any],
-        notification: Dict[str, bool] = None,
-        priority: str = 'medium'
+        notification: Optional[Dict[str, bool]] = None,
+        priority: str = 'medium',
+        user_id: Optional[int] = None
     ) -> str:
         """
-        Yeni alert oluştur
+        Yeni alert olustur
         
         Args:
             alert_type: 'price', 'score', 'signal', 'position'
-            ticker: Hisse sembolü
-            condition: Alert koşulu (örn: {'price_above': 450.0})
-            notification: Bildirim ayarları
+            ticker: Hisse sembolu
+            condition: Alert kosulu (orn: {'price_above': 450.0})
+            notification: Bildirim ayarlari
+            priority: low, medium, high, critical
+            user_id: Kullanici ID (opsiyonel)
         
         Returns:
             Alert ID
@@ -54,53 +58,55 @@ class AlertManager:
         alert_id = str(uuid.uuid4())
         
         if notification is None:
-            notification = {
-                'browser': True,
-                'sound': True
-            }
+            notification = {'browser': True, 'sound': True}
         
-        alert = {
-            'id': alert_id,
-            'type': alert_type,
-            'ticker': ticker,
-            'condition': condition,
-            'triggered': False,
-            'active': True,
-            'priority': priority,  # low, medium, high, critical
-            'created_at': datetime.now().isoformat(),
-            'notification': notification,
-            'message': self._generate_message(alert_type, ticker, condition)
-        }
+        message = self._generate_message(alert_type, ticker, condition)
         
-        self.alerts[alert_id] = alert
-        logger.info(f"Created alert {alert_id}: {alert_type} for {ticker}")
-        
-        return alert_id
+        db = self._get_db()
+        try:
+            alert = Alert(
+                id=alert_id,
+                user_id=user_id,
+                alert_type=alert_type,
+                ticker=ticker,
+                condition=condition,
+                priority=priority,
+                message=message,
+                notification_settings=notification,
+                active=True,
+                triggered=False
+            )
+            db.add(alert)
+            db.commit()
+            logger.info(f"Created alert {alert_id}: {alert_type} for {ticker}")
+            return alert_id
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error creating alert: {e}")
+            raise
+        finally:
+            db.close()
     
     def _generate_message(self, alert_type: str, ticker: str, condition: Dict) -> str:
-        """Alert mesajı oluştur"""
-        # IPO bildirimi özel formatı
+        """Alert mesaji olustur"""
         if condition.get('type') == 'new_ipo':
-            return f"🎉 Yeni Halka Arz: {ticker}"
+            return f"Yeni Halka Arz: {ticker}"
         
         if alert_type == 'price':
             if 'price_above' in condition:
-                return f"{ticker} {condition['price_above']}₺'ye ulaştı! 📈"
+                return f"{ticker} {condition['price_above']} TL seviyesine ulasti"
             elif 'price_below' in condition:
-                return f"{ticker} {condition['price_below']}₺'ye düştü! 📉"
-        
+                return f"{ticker} {condition['price_below']} TL seviyesine dustu"
         elif alert_type == 'score':
             if 'score_above' in condition:
-                return f"{ticker} momentum skoru {condition['score_above']}'ın üstünde! 🎯"
-        
+                return f"{ticker} momentum skoru {condition['score_above']} ustunde"
         elif alert_type == 'signal':
-            return f"{ticker} için BUY sinyali geldi! 💰"
-        
+            return f"{ticker} icin BUY sinyali geldi"
         elif alert_type == 'position':
             if 'stop_loss' in condition:
-                return f"{ticker} stop-loss tetiklendi! 🛑"
+                return f"{ticker} stop-loss tetiklendi"
             elif 'take_profit' in condition:
-                return f"{ticker} take-profit hedefine ulaştı! ✅"
+                return f"{ticker} take-profit hedefine ulasti"
         
         return f"{ticker} alert tetiklendi"
     
@@ -109,229 +115,276 @@ class AlertManager:
         alert_id: str,
         current_data: Dict[str, Any]
     ) -> bool:
-        """
-        Bir alert'in tetiklenip tetiklenmediğini kontrol et
-        
-        Args:
-            alert_id: Alert ID
-            current_data: Mevcut market data (price, score, vb.)
-        
-        Returns:
-            True if triggered
-        """
-        if alert_id not in self.alerts:
+        """Bir alert'in tetiklenip tetiklenmedigini kontrol et"""
+        db = self._get_db()
+        try:
+            alert = db.query(Alert).filter(
+                Alert.id == alert_id,
+                Alert.active == True,
+                Alert.triggered == False
+            ).first()
+            
+            if not alert:
+                return False
+            
+            triggered = self._evaluate_condition(alert, current_data)
+            
+            if triggered:
+                return self._trigger_alert(db, alert)
+            
             return False
+        finally:
+            db.close()
+    
+    def _evaluate_condition(self, alert: Alert, current_data: Dict[str, Any]) -> bool:
+        """Alert kosulunu degerlendir"""
+        condition = alert.condition
+        alert_type = alert.alert_type
         
-        alert = self.alerts[alert_id]
-        
-        if not alert['active'] or alert['triggered']:
-            return False
-        
-        condition = alert['condition']
-        alert_type = alert['type']
-        
-        # Price alerts
         if alert_type == 'price':
             current_price = current_data.get('price', 0)
-            
-            if 'price_above' in condition:
-                if current_price >= condition['price_above']:
-                    return self._trigger_alert(alert_id)
-            
-            elif 'price_below' in condition:
-                if current_price <= condition['price_below']:
-                    return self._trigger_alert(alert_id)
+            if 'price_above' in condition and current_price >= condition['price_above']:
+                return True
+            if 'price_below' in condition and current_price <= condition['price_below']:
+                return True
         
-        # Score alerts
         elif alert_type == 'score':
             current_score = current_data.get('score', 0)
-            
-            if 'score_above' in condition:
-                if current_score >= condition['score_above']:
-                    return self._trigger_alert(alert_id)
-            
-            elif 'score_below' in condition:
-                if current_score <= condition['score_below']:
-                    return self._trigger_alert(alert_id)
+            if 'score_above' in condition and current_score >= condition['score_above']:
+                return True
+            if 'score_below' in condition and current_score <= condition['score_below']:
+                return True
         
-        # Signal alerts
         elif alert_type == 'signal':
             recommendation = current_data.get('recommendation', '')
-            
             if recommendation == 'BUY':
-                return self._trigger_alert(alert_id)
+                return True
         
         return False
     
-    def _trigger_alert(self, alert_id: str) -> bool:
-        """Alert'i tetikle"""
-        if alert_id in self.alerts:
-            alert = self.alerts[alert_id]
-            alert['triggered'] = True
-            alert['triggered_at'] = datetime.now().isoformat()
+    def _trigger_alert(self, db: Session, alert: Alert) -> bool:
+        """Alert'i tetikle ve bildirim olustur"""
+        try:
+            alert.triggered = True
+            alert.triggered_at = datetime.utcnow()
             
-            # Triggered list'e ekle
-            self.triggered_alerts.append(alert.copy())
+            notif = Notification(
+                user_id=alert.user_id,
+                alert_id=alert.id,
+                title=f"{alert.alert_type.upper()} Alert",
+                message=alert.message or f"{alert.ticker} alert tetiklendi",
+                notification_type='alert',
+                priority=alert.priority or 'medium',
+                ticker=alert.ticker,
+                data={'condition': alert.condition}
+            )
+            db.add(notif)
+            db.commit()
             
-            # Geçmişe ekle
-            self._add_to_history(alert.copy())
-            
-            logger.info(f"Alert triggered: {alert_id} - {alert['message']}")
+            logger.info(f"Alert triggered: {alert.id} - {alert.message}")
             return True
-        
-        return False
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error triggering alert: {e}")
+            return False
     
     def check_all_alerts(
         self,
         market_data: Dict[str, Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """
-        Tüm aktif alertleri kontrol et
-        
-        Args:
-            market_data: {'THYAO.IS': {'price': 450, 'score': 85, ...}, ...}
-        
-        Returns:
-            Tetiklenen alertler
-        """
-        newly_triggered = []
-        
-        for alert_id, alert in self.alerts.items():
-            if not alert['active'] or alert['triggered']:
-                continue
+        """Tum aktif alertleri kontrol et"""
+        db = self._get_db()
+        try:
+            active_alerts = db.query(Alert).filter(
+                Alert.active == True,
+                Alert.triggered == False
+            ).all()
             
-            ticker = alert['ticker']
+            newly_triggered = []
             
-            if ticker in market_data:
-                if self.check_alert(alert_id, market_data[ticker]):
-                    newly_triggered.append(alert)
-        
-        return newly_triggered
+            for alert in active_alerts:
+                ticker = alert.ticker
+                if ticker not in market_data:
+                    continue
+                
+                if self._evaluate_condition(alert, market_data[ticker]):
+                    if self._trigger_alert(db, alert):
+                        newly_triggered.append(alert.to_dict())
+            
+            return newly_triggered
+        finally:
+            db.close()
     
-    def get_active_alerts(self) -> List[Dict[str, Any]]:
+    def get_active_alerts(self, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """Aktif alertleri getir"""
-        return [
-            alert for alert in self.alerts.values()
-            if alert['active'] and not alert['triggered']
-        ]
+        db = self._get_db()
+        try:
+            query = db.query(Alert).filter(
+                Alert.active == True,
+                Alert.triggered == False
+            )
+            if user_id:
+                query = query.filter(Alert.user_id == user_id)
+            
+            alerts = query.order_by(Alert.created_at.desc()).all()
+            return [a.to_dict() for a in alerts]
+        finally:
+            db.close()
     
-    def get_triggered_alerts(self, clear: bool = False) -> List[Dict[str, Any]]:
-        """
-        Tetiklenmiş alertleri getir
-        
-        Args:
-            clear: True ise triggered list'i temizle
-        """
-        triggered = self.triggered_alerts.copy()
-        
-        if clear:
-            self.triggered_alerts.clear()
-        
-        return triggered
+    def get_triggered_alerts(self, clear: bool = False, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Tetiklenmis alertleri getir"""
+        db = self._get_db()
+        try:
+            query = db.query(Alert).filter(Alert.triggered == True)
+            if user_id:
+                query = query.filter(Alert.user_id == user_id)
+            
+            alerts = query.order_by(Alert.triggered_at.desc()).all()
+            result = [a.to_dict() for a in alerts]
+            
+            if clear:
+                for alert in alerts:
+                    alert.active = False
+                db.commit()
+            
+            return result
+        finally:
+            db.close()
     
     def delete_alert(self, alert_id: str) -> bool:
         """Alert sil"""
-        if alert_id in self.alerts:
-            del self.alerts[alert_id]
-            logger.info(f"Deleted alert {alert_id}")
-            return True
-        
-        return False
+        db = self._get_db()
+        try:
+            alert = db.query(Alert).filter(Alert.id == alert_id).first()
+            if alert:
+                db.delete(alert)
+                db.commit()
+                logger.info(f"Deleted alert {alert_id}")
+                return True
+            return False
+        finally:
+            db.close()
     
     def toggle_alert(self, alert_id: str, active: bool) -> bool:
         """Alert'i aktif/pasif yap"""
-        if alert_id in self.alerts:
-            self.alerts[alert_id]['active'] = active
-            logger.info(f"Alert {alert_id} set to {'active' if active else 'inactive'}")
-            return True
-        
-        return False
-    
-    def _add_to_history(self, alert: Dict[str, Any]) -> None:
-        """Bildirim geçmişine ekle"""
-        self.notification_history.insert(0, {
-            **alert,
-            'read': False,
-            'archived': False
-        })
-        
-        # Maksimum limiti aş, eski kayıtları temizle
-        if len(self.notification_history) > self.max_history:
-            self.notification_history = self.notification_history[:self.max_history]
+        db = self._get_db()
+        try:
+            alert = db.query(Alert).filter(Alert.id == alert_id).first()
+            if alert:
+                alert.active = active
+                db.commit()
+                logger.info(f"Alert {alert_id} set to {'active' if active else 'inactive'}")
+                return True
+            return False
+        finally:
+            db.close()
     
     def get_notification_history(
         self,
         limit: int = 50,
-        unread_only: bool = False
+        unread_only: bool = False,
+        user_id: Optional[int] = None
     ) -> List[Dict[str, Any]]:
-        """Bildirim geçmişini getir"""
-        history = self.notification_history
-        
-        if unread_only:
-            history = [n for n in history if not n.get('read', False)]
-        
-        return history[:limit]
+        """Bildirim gecmisini getir"""
+        db = self._get_db()
+        try:
+            query = db.query(Notification)
+            if user_id:
+                query = query.filter(Notification.user_id == user_id)
+            if unread_only:
+                query = query.filter(Notification.read == False)
+            
+            notifications = query.order_by(
+                Notification.created_at.desc()
+            ).limit(limit).all()
+            
+            return [n.to_dict() for n in notifications]
+        finally:
+            db.close()
     
     def mark_notification_read(self, alert_id: str) -> bool:
-        """Bildirimi okundu olarak işaretle"""
-        for notif in self.notification_history:
-            if notif['id'] == alert_id:
-                notif['read'] = True
+        """Bildirimi okundu olarak isaretle"""
+        db = self._get_db()
+        try:
+            notif = db.query(Notification).filter(
+                Notification.alert_id == alert_id
+            ).first()
+            if notif:
+                notif.read = True
+                notif.read_at = datetime.utcnow()
+                db.commit()
                 return True
-        return False
+            return False
+        finally:
+            db.close()
     
-    def mark_all_read(self) -> int:
-        """Tüm bildirimleri okundu işaretle"""
-        count = 0
-        for notif in self.notification_history:
-            if not notif.get('read', False):
-                notif['read'] = True
-                count += 1
-        return count
-    
-    def clear_history(self, days: int = None) -> int:
-        """Bildirim geçmişini temizle"""
-        if days is None:
-            # Tümünü temizle
-            count = len(self.notification_history)
-            self.notification_history.clear()
-            return count
-        else:
-            # Belirli gün öncesi kayıtları temizle
-            from datetime import timedelta
-            cutoff = datetime.now() - timedelta(days=days)
+    def mark_all_read(self, user_id: Optional[int] = None) -> int:
+        """Tum bildirimleri okundu isaretle"""
+        db = self._get_db()
+        try:
+            query = db.query(Notification).filter(Notification.read == False)
+            if user_id:
+                query = query.filter(Notification.user_id == user_id)
             
-            original_count = len(self.notification_history)
-            self.notification_history = [
-                n for n in self.notification_history
-                if datetime.fromisoformat(n['created_at']) > cutoff
-            ]
-            return original_count - len(self.notification_history)
+            count = query.update({
+                Notification.read: True,
+                Notification.read_at: datetime.utcnow()
+            })
+            db.commit()
+            return count
+        finally:
+            db.close()
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def clear_history(self, days: Optional[int] = None, user_id: Optional[int] = None) -> int:
+        """Bildirim gecmisini temizle"""
+        db = self._get_db()
+        try:
+            query = db.query(Notification)
+            if user_id:
+                query = query.filter(Notification.user_id == user_id)
+            
+            if days is not None:
+                from datetime import timedelta
+                cutoff = datetime.utcnow() - timedelta(days=days)
+                query = query.filter(Notification.created_at < cutoff)
+            
+            count = query.delete()
+            db.commit()
+            return count
+        finally:
+            db.close()
+    
+    def get_statistics(self, user_id: Optional[int] = None) -> Dict[str, Any]:
         """Bildirim istatistiklerini getir"""
-        total_alerts = len(self.alerts)
-        active_alerts = len(self.get_active_alerts())
-        triggered_today = len([
-            n for n in self.notification_history
-            if datetime.fromisoformat(n['created_at']).date() == datetime.now().date()
-        ])
-        unread_count = len([
-            n for n in self.notification_history
-            if not n.get('read', False)
-        ])
-        
-        # Türe göre dağılım
-        type_distribution = {}
-        for alert in self.alerts.values():
-            alert_type = alert['type']
-            type_distribution[alert_type] = type_distribution.get(alert_type, 0) + 1
-        
-        return {
-            'total_alerts': total_alerts,
-            'active_alerts': active_alerts,
-            'triggered_today': triggered_today,
-            'unread_count': unread_count,
-            'total_history': len(self.notification_history),
-            'type_distribution': type_distribution
-        }
+        db = self._get_db()
+        try:
+            alert_query = db.query(Alert)
+            notif_query = db.query(Notification)
+            
+            if user_id:
+                alert_query = alert_query.filter(Alert.user_id == user_id)
+                notif_query = notif_query.filter(Notification.user_id == user_id)
+            
+            total_alerts = alert_query.count()
+            active_alerts = alert_query.filter(
+                Alert.active == True, Alert.triggered == False
+            ).count()
+            
+            today = datetime.utcnow().date()
+            from sqlalchemy import func as sqlfunc
+            triggered_today = notif_query.filter(
+                sqlfunc.date(Notification.created_at) == today
+            ).count()
+            
+            unread_count = notif_query.filter(Notification.read == False).count()
+            total_history = notif_query.count()
+            
+            return {
+                'total_alerts': total_alerts,
+                'active_alerts': active_alerts,
+                'triggered_today': triggered_today,
+                'unread_count': unread_count,
+                'total_history': total_history
+            }
+        finally:
+            db.close()
