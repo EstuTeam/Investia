@@ -32,8 +32,8 @@ android {
             useSupportLibrary = true
         }
 
-        // API Base URL - production Vercel
-        buildConfigField("String", "API_BASE_URL", "\"https://trading-botu.vercel.app\"")
+        // API Base URL - production (Render cloud)
+        buildConfigField("String", "API_BASE_URL", "\"https://investia-ajmh.onrender.com\"")
     }
 
     signingConfigs {
@@ -47,8 +47,8 @@ android {
 
     buildTypes {
         debug {
-            // Lokal backend (aynı Wi-Fi ağındaki telefon için)
-            buildConfigField("String", "API_BASE_URL", "\"http://192.168.1.187:8000\"")
+            // Cloud backend (Render)
+            buildConfigField("String", "API_BASE_URL", "\"https://investia-ajmh.onrender.com\"")
         }
         release {
             isMinifyEnabled = true
