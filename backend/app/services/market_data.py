@@ -7,7 +7,6 @@ from typing import Dict, Optional
 from datetime import datetime
 import asyncio
 import pandas as pd
-from curl_cffi import requests as curl_requests
 from app.services.data_fetcher import DataFetcher
 from app.utils.logger import logger
 
@@ -56,35 +55,27 @@ class MarketDataService:
             return None
 
     def _fetch_yahoo_price(self, ticker: str) -> Optional[Dict]:
-        """Genel piyasa verilerini Yahoo Finance'tan çek"""
+        """Genel piyasa verilerini Yahoo Finance'tan çek (yf.Ticker ile)"""
         try:
-            # curl_cffi session per call to avoid cross-request contamination
-            session = curl_requests.Session(impersonate="chrome", verify=False)
-            hist = yf.download(
-                ticker,
-                period="2d",
-                interval="1d",
-                progress=False,
-                session=session,
-            )
-            if hist.empty:
+            stock = yf.Ticker(ticker)
+            try:
+                hist = stock.history(period="5d", interval="1d", timeout=15)
+            except TypeError:
+                hist = stock.history(period="5d", interval="1d")
+
+            if hist is None or hist.empty:
+                logger.warning(f"No data returned for {ticker}")
                 return None
 
-            # yfinance sometimes returns MultiIndex columns even for a single ticker
-            if isinstance(hist.columns, pd.MultiIndex):
-                hist = hist.droplevel(1, axis=1)
+            # Column names: yf.Ticker returns capitalized columns
+            close_col = "Close" if "Close" in hist.columns else "close"
+            if close_col not in hist.columns:
+                # Try lowercase
+                hist.columns = hist.columns.str.capitalize()
+                close_col = "Close"
 
-            last_close = hist["Close"].iloc[-1]
-            prev_close_val = hist["Close"].iloc[-2] if len(hist) > 1 else last_close
-
-            def _to_float(val):
-                try:
-                    return float(val.item()) if hasattr(val, "item") else float(val)
-                except Exception:
-                    return float(val)
-
-            current_price = _to_float(last_close)
-            previous_close = _to_float(prev_close_val)
+            current_price = float(hist[close_col].iloc[-1])
+            previous_close = float(hist[close_col].iloc[-2]) if len(hist) > 1 else current_price
             change = current_price - previous_close
             change_percent = (change / previous_close * 100) if previous_close else 0
 

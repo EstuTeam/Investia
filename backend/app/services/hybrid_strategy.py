@@ -525,13 +525,18 @@ class HybridSignalGenerator:
             return True, "Market filtresi devre dışı"
         
         try:
-            # XU100 (BIST100) verisini çek
-            xu100 = yf.download('XU100.IS', period='1mo', progress=False)
+            # XU100 (BIST100) verisini çek - yf.Ticker kullan (download sunucuda çalışmıyor)
+            stock = yf.Ticker('XU100.IS')
+            try:
+                xu100 = stock.history(period='1mo', interval='1d', timeout=15)
+            except TypeError:
+                xu100 = stock.history(period='1mo', interval='1d')
             
-            if xu100.empty or len(xu100) < 10:
+            if xu100 is None or xu100.empty or len(xu100) < 10:
                 return True, "BIST100 verisi alınamadı (filtre atlandı)"
             
-            close = xu100['Close'].values.flatten()
+            close_col = 'Close' if 'Close' in xu100.columns else 'close'
+            close = xu100[close_col].values.flatten()
             
             # EMA10 ve EMA20 hesapla
             ema10 = pd.Series(close).ewm(span=10).mean().iloc[-1]
@@ -866,12 +871,19 @@ class HybridSignalGenerator:
                 break
             
             try:
-                # Veri çek
-                df = yf.download(ticker, period=period, progress=False)
+                # Veri çek - yf.Ticker kullan (download sunucuda çalışmıyor)
+                stock = yf.Ticker(ticker)
+                try:
+                    df = stock.history(period=period, interval='1d', timeout=15)
+                except TypeError:
+                    df = stock.history(period=period, interval='1d')
                 
-                # Multi-index düzeltme (yfinance bazen multi-index döndürür)
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
+                if df is None:
+                    df = pd.DataFrame()
+                
+                # Column isimlerini standartlaştır
+                if not df.empty and hasattr(df, 'columns'):
+                    df.columns = [c.capitalize() if c.islower() else c for c in df.columns]
                 
                 if df.empty or len(df) < 50:
                     continue
