@@ -14,10 +14,20 @@ data class ChatMessageDto(
     val content: String
 )
 
+// Backend /api/ai/chat returns: { success, response: { id, role, content, timestamp } }
+// We need a custom deserializer or use Any type and extract content
 data class ChatResponseDto(
-    val response: String = "",
+    val response: Any? = null,  // Can be String or Object with {id, role, content, timestamp}
     val success: Boolean = true
-)
+) {
+    fun getResponseContent(): String {
+        return when (response) {
+            is String -> response
+            is Map<*, *> -> (response as Map<*, *>)["content"]?.toString() ?: ""
+            else -> response?.toString() ?: ""
+        }
+    }
+}
 
 // ===== Chat Room =====
 data class ChatRoomListDto(

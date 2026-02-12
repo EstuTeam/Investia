@@ -30,10 +30,6 @@ fun SignalCenterScreen(
     viewModel: SignalCenterViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    val bist30 = listOf(
-        "THYAO", "GARAN", "AKBNK", "YKBNK", "EREGL", "BIMAS", "ASELS",
-        "KCHOL", "SAHOL", "SISE", "TCELL", "TUPRS", "PGSUS", "FROTO", "TOASO"
-    )
 
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -57,8 +53,13 @@ fun SignalCenterScreen(
             Column {
                 Text("Sinyal Merkezi", style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-                Text("BIST30 hisseleri için sinyaller",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (state.marketStatus.isNotBlank()) {
+                    Text("Piyasa: ${state.marketStatus}",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Text("BIST30 sinyalleri",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
 
@@ -79,11 +80,18 @@ fun SignalCenterScreen(
                 onRetry = { viewModel.loadSignals() }
             )
             else -> {
+                // Use picks from daily-picks endpoint (single batch API call)
+                val displaySymbols = if (state.picks.isNotEmpty()) {
+                    state.picks.map { it.symbol }
+                } else {
+                    state.signals.keys.toList()
+                }
+                
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(bist30) { symbol ->
+                    items(displaySymbols) { symbol ->
                         val signal = state.signals[symbol]
                         SignalRow(
                             symbol = symbol,

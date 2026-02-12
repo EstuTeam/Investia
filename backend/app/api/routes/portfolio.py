@@ -147,11 +147,11 @@ async def get_portfolios(
                 "id": p.id,
                 "name": safe_str(p.name),
                 "description": safe_str(p.description) or None,
-                "isDefault": bool(safe_get(p, 'is_default', False)),
-                "totalValue": safe_float(p.total_value),
-                "totalCost": safe_float(p.total_cost),
-                "totalProfitLoss": safe_float(p.total_profit_loss),
-                "totalProfitLossPercent": safe_float(p.total_profit_loss_percent),
+                "is_default": bool(safe_get(p, 'is_default', False)),
+                "total_value": safe_float(p.total_value),
+                "total_cost": safe_float(p.total_cost),
+                "total_profit_loss": safe_float(p.total_profit_loss),
+                "total_profit_loss_percent": safe_float(p.total_profit_loss_percent),
                 "createdAt": safe_datetime_iso(p.created_at)
             }
             for p in portfolios
@@ -254,11 +254,11 @@ async def get_portfolio(
                 "id": portfolio.id,
                 "name": safe_str(portfolio.name),
                 "description": safe_str(portfolio.description) or None,
-                "isDefault": bool(safe_get(portfolio, 'is_default', False)),
-                "totalValue": safe_float(portfolio.total_value),
-                "totalCost": safe_float(portfolio.total_cost),
-                "totalProfitLoss": safe_float(portfolio.total_profit_loss),
-                "totalProfitLossPercent": safe_float(portfolio.total_profit_loss_percent)
+                "is_default": bool(safe_get(portfolio, 'is_default', False)),
+                "total_value": safe_float(portfolio.total_value),
+                "total_cost": safe_float(portfolio.total_cost),
+                "total_profit_loss": safe_float(portfolio.total_profit_loss),
+                "total_profit_loss_percent": safe_float(portfolio.total_profit_loss_percent)
             },
             "holdings": holdings,
             "transactions": [

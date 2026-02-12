@@ -12,6 +12,33 @@ from app.services.news_service import (
 
 router = APIRouter(prefix="/news", tags=["news"])
 
+# Demo finance news for fallback
+DEMO_FINANCE_NEWS = {
+    "type": "finance",
+    "turkey": [
+        {
+            "title": "BIST 100 Endeksi Güne Yükselişle Başladı",
+            "description": "Borsa İstanbul'da BIST 100 endeksi yeni haftaya yükselişle başladı.",
+            "source": "Borsa İstanbul",
+            "link": "https://www.borsaistanbul.com",
+            "published": "2024-01-01T09:00:00",
+            "category": "finance"
+        },
+        {
+            "title": "Dolar/TL Kurunda Son Durum",
+            "description": "Dolar/TL kuru güncel gelişmeler ışığında hareketini sürdürüyor.",
+            "source": "TCMB",
+            "link": "https://www.tcmb.gov.tr",
+            "published": "2024-01-01T10:00:00",
+            "category": "finance"
+        }
+    ],
+    "world": [],
+    "finance": [],
+    "articles": [],
+    "source": "demo"
+}
+
 
 @router.get("/economy")
 async def economy_news():
@@ -26,6 +53,22 @@ async def economy_news():
     except Exception as e:
         logger.error(f"Error fetching economy news: {e}")
         return DEMO_ECONOMY_NEWS
+
+
+@router.get("/finance")
+async def finance_news():
+    """Borsa/finans haberlerini getir"""
+    try:
+        # Reuse economy news but mark as finance
+        news = await get_economy_news()
+        if not news.get("turkey") and not news.get("world"):
+            logger.warning("No finance news fetched, returning demo data")
+            return DEMO_FINANCE_NEWS
+        news["type"] = "finance"
+        return news
+    except Exception as e:
+        logger.error(f"Error fetching finance news: {e}")
+        return DEMO_FINANCE_NEWS
 
 
 @router.get("/general")

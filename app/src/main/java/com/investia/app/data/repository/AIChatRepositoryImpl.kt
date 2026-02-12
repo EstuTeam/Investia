@@ -24,7 +24,7 @@ class AIChatRepositoryImpl @Inject constructor(
             )
             val response = api.sendChatMessage(request)
             if (response.success) {
-                response.response
+                response.getResponseContent()
             } else {
                 throw Exception("AI yanıt veremedi")
             }
@@ -33,13 +33,13 @@ class AIChatRepositoryImpl @Inject constructor(
 
     override suspend fun getMarketSummary(): Resource<String> {
         return safeApiCall {
-            api.getMarketSummary().response
+            api.getMarketSummary().getResponseContent()
         }
     }
 
     override suspend fun getAIStockAnalysis(symbol: String): Resource<String> {
         return safeApiCall {
-            api.getAIStockAnalysis(symbol).response
+            api.getAIStockAnalysis(symbol).getResponseContent()
         }
     }
 }

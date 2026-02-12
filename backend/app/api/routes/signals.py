@@ -255,6 +255,7 @@ async def get_daily_picks(
             })
         
         response_data = {
+            "status": "success",
             "timestamp": datetime.now().isoformat(),
             "market_status": {
                 "phase": "hybrid_v2_v3_active" if market_ok else "hybrid_v2_v3_caution",
@@ -265,6 +266,7 @@ async def get_daily_picks(
             "strategy": "hybrid_v2_v3",
             "total_scanned": result.get('summary', {}).get('total_scanned', len(BIST30)),
             "signals_found": len(picks),
+            "found": len(picks),
             "picks": picks,
             "warnings": market_warnings,
             "strategy_info": {
@@ -277,7 +279,9 @@ async def get_daily_picks(
                 "tp2_rr": "1:4.0",
                 "expected_wr": "62-70%",
                 "expected_pf": "2.5+",
-                "market_filter_passed": market_ok
+                "market_filter_passed": market_ok,
+                "win_rate": "62-70%",
+                "profit_factor": "2.5+"
             },
             "sectors_used": result.get('summary', {}).get('sectors_used', {}),
             "market_trend": "YUKSELIS" if market_ok else "DUSUS"
@@ -383,17 +387,17 @@ def get_sector(ticker: str) -> str:
 async def get_signals(
     ticker: str,
     strategy: str = Query("moderate", description="Strategy type: conservative, moderate, aggressive"),
-    interval: str = Query("5m", description="Data interval"),
-    period: str = Query("1d", description="Data period")
+    interval: str = Query("1d", description="Data interval"),
+    period: str = Query("3mo", description="Data period")
 ):
     """
-    Generate trading signals for  a stock
+    Generate trading signals for a stock
     
     Args:
         ticker: Stock ticker symbol
         strategy: Strategy type
-        interval: Data interval
-        period: Data period
+        interval: Data interval (default 1d for market-closed resilience)
+        period: Data period (default 3mo for sufficient data)
     
     Returns:
         Trading signal with entry/exit levels
@@ -402,13 +406,17 @@ async def get_signals(
         logger.info(f"API request: Generate signal for {ticker} with {strategy} strategy")
         
         # Validate strategy
-        if strategy not in ["conservative", "moderate", "aggressive"]:
+        if strategy not in ["conservative", "moderate", "aggressive", "hybrid"]:
             raise HTTPException(status_code=400, detail="Invalid strategy type")
+        
+        # Ensure ticker has .IS suffix for BIST
+        if not ticker.endswith(".IS"):
+            ticker = f"{ticker}.IS"
         
         # Fetch data
         df = data_fetcher.fetch_realtime_data(ticker, interval, period)
         
-        if df.empty or len(df) < 50:
+        if df.empty or len(df) < 20:
             raise HTTPException(status_code=404, detail="Insufficient data for signal generation")
         
         # Calculate indicators
@@ -416,16 +424,40 @@ async def get_signals(
         latest_indicators = tech_analysis.get_latest_indicators(df_with_indicators)
         
         # Generate signal
-        signal_gen = SignalGenerator(strategy_type=strategy)
+        signal_gen = SignalGenerator(strategy_type=strategy if strategy != "hybrid" else "moderate")
         signal = signal_gen.generate_signal(df_with_indicators, latest_indicators)
         
-        # Add ticker and interval info
-        signal['ticker'] = ticker
-        signal['interval'] = interval
-        signal['strategy'] = strategy
-        signal['sector'] = get_sector(ticker)
+        # Get current price from dataframe
+        current_price = float(df['Close'].iloc[-1]) if 'Close' in df.columns else 0
+        prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 and 'Close' in df.columns else current_price
+        price_change = current_price - prev_close
+        change_percent = (price_change / prev_close * 100) if prev_close > 0 else 0
         
-        return signal
+        # Build response matching Android SignalDataDto expectations
+        response = {
+            "symbol": ticker.replace(".IS", ""),
+            "ticker": ticker,
+            "signal": signal.get('action', signal.get('signal', 'HOLD')).upper(),
+            "action": signal.get('action', signal.get('signal', 'HOLD')).upper(),
+            "price": current_price,
+            "entry_price": signal.get('entry_price', current_price),
+            "change": round(price_change, 2),
+            "changePercent": round(change_percent, 2),
+            "confidence": signal.get('confidence', 0),
+            "strength": signal.get('strength', signal.get('confidence', 0)),
+            "score": signal.get('strength', signal.get('confidence', 0)),
+            "strategy": strategy,
+            "rsi": signal.get('rsi', latest_indicators.get('rsi', 0)),
+            "macd_signal": signal.get('macd_signal', ''),
+            "stop_loss": signal.get('stop_loss', 0),
+            "take_profit": signal.get('take_profit', 0),
+            "interval": interval,
+            "sector": get_sector(ticker),
+            "timestamp": datetime.now().isoformat(),
+            "reasons": signal.get('reasons', [])
+        }
+        
+        return response
     
     except HTTPException:
         raise

@@ -16,7 +16,9 @@ data class PortfolioDto(
     @SerializedName("is_default") val isDefault: Boolean = false,
     val holdings: List<PortfolioItemDto> = emptyList(),
     @SerializedName("total_value") val totalValue: Double = 0.0,
-    @SerializedName("total_cost") val totalCost: Double = 0.0
+    @SerializedName("total_cost") val totalCost: Double = 0.0,
+    @SerializedName("total_profit_loss") val totalProfitLoss: Double = 0.0,
+    @SerializedName("total_profit_loss_percent") val totalProfitLossPercent: Double = 0.0
 ) {
     fun toDomain() = Portfolio(
         id = id, name = name, description = description,

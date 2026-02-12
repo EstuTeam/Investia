@@ -8,7 +8,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.3"
       - key: DATABASE_URL
-        value: sqlite:///./trading_bot.db
+        sync: false  # Set in Render Dashboard: postgresql://user:pass@host/dbname (Neon)
       - key: PYTHONPATH
         value: /opt/render/project/src/backend
       - key: SECRET_KEY
@@ -21,6 +21,8 @@ services:
         value: INFO
       - key: CORS_ORIGINS
         value: "*"
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Set in Render Dashboard
     rootDir: backend
     plan: free
     healthCheckPath: /

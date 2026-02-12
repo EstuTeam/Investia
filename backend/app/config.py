@@ -71,8 +71,8 @@ class Settings(BaseSettings):
     rate_limit_per_hour: int = 3000
     rate_limit_burst: int = 30
     
-    # Security - MUST be set via .env in production
-    secret_key: str = "CHANGE-ME-GENERATE-WITH-openssl-rand-hex-32"
+    # Security - Set via environment variable in production (Render auto-generates)
+    secret_key: str = os.getenv("SECRET_KEY", "dev-only-insecure-key-change-in-production")
     jwt_algorithm: str = "HS256"
     jwt_expiration_hours: int = 24
     jwt_refresh_days: int = 30

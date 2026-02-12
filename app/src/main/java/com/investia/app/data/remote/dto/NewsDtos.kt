@@ -14,7 +14,14 @@ data class NewsResponseDto(
     val source: String = ""
 ) {
     fun getAllArticles(): List<NewsItemDto> {
-        return turkey.ifEmpty { world.ifEmpty { finance.ifEmpty { crypto.ifEmpty { articles } } } }
+        // Combine ALL categories, not just the first non-empty one
+        val combined = mutableListOf<NewsItemDto>()
+        combined.addAll(turkey)
+        combined.addAll(world)
+        combined.addAll(finance)
+        combined.addAll(crypto)
+        combined.addAll(articles)
+        return if (combined.isNotEmpty()) combined else articles
     }
 }
 

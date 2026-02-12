@@ -9,8 +9,8 @@ from app.services.chat_service import chat_service
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 class SendMessageRequest(BaseModel):
-    user_id: str
-    username: str
+    user_id: str = "anonymous"
+    username: str = "Anonim"
     content: str
     message_type: str = "text"
     reply_to: Optional[str] = None
@@ -29,8 +29,8 @@ class ShareTradeRequest(BaseModel):
     pnl: Optional[float] = None
 
 class JoinRoomRequest(BaseModel):
-    user_id: str
-    username: str
+    user_id: str = "anonymous"
+    username: str = "Anonim"
 
 @router.get("/rooms")
 async def get_rooms():

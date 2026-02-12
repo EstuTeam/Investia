@@ -134,30 +134,43 @@ data class StockPickDto(
 
 // ===== Signals =====
 // Backend /api/signals/{symbol} returns:
-// { symbol, signal, action, price, change, changePercent, confidence, strategy, timestamp }
+// { symbol, signal, action, price, entry_price, change, changePercent, 
+//   confidence, strength, score, strategy, rsi, macd_signal, timestamp }
 data class SignalDataDto(
     val symbol: String = "",
+    val ticker: String = "",
     val signal: String = "HOLD",
     val action: String = "",
     val price: Double = 0.0,
+    @SerializedName("entry_price") val entryPrice: Double = 0.0,
     val change: Double = 0.0,
     val changePercent: Double = 0.0,
+    @SerializedName("change_percent") val changePercentSnake: Double = 0.0,
     val confidence: Double = 0.0,
+    val strength: Int = 0,
     val strategy: String = "",
     val rsi: Double = 0.0,
     @SerializedName("macd_signal") val macdSignal: String = "",
     val score: Int = 0,
+    @SerializedName("stop_loss") val stopLoss: Double = 0.0,
+    @SerializedName("take_profit") val takeProfit: Double = 0.0,
+    val sector: String = "",
+    val reasons: List<String> = emptyList(),
     val timestamp: String = ""
 ) {
     fun toDomain() = SignalData(
-        symbol = symbol,
-        signal = try { SignalType.valueOf(signal.uppercase()) } catch (e: Exception) { SignalType.HOLD },
-        action = action,
-        price = price,
-        changePercent = changePercent,
+        symbol = symbol.ifBlank { ticker.removeSuffix(".IS") },
+        signal = try { SignalType.valueOf((signal.ifBlank { action }).uppercase()) } catch (e: Exception) { SignalType.HOLD },
+        action = action.ifBlank { signal },
+        price = if (price > 0) price else entryPrice,
+        changePercent = if (changePercent != 0.0) changePercent else changePercentSnake,
         rsi = rsi,
         macdSignal = macdSignal,
-        score = if (score > 0) score else confidence.toInt()
+        score = when {
+            score > 0 -> score
+            strength > 0 -> strength
+            else -> confidence.toInt()
+        }
     )
 }
 

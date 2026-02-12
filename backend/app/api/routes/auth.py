@@ -518,22 +518,16 @@ async def forgot_password(
             # TODO: Send actual email in production
             logger.info(f"Password reset requested for {request.email}")
             
-            # For mobile app testing, return token directly
-            return {
-                "success": True,
-                "message": "Şifre sıfırlama kodu gönderildi",
-                "data": {
-                    "reset_token": token,
-                    "expires_in": 3600  # 1 hour
-                }
-            }
+            # In production, send token via email - do NOT return in response
+            # For development, log token to console
+            logger.debug(f"DEV ONLY - Reset token: {token}")
         except Exception as e:
             logger.error(f"Error generating reset token: {e}")
     
     # Always return success (prevent email enumeration)
     return {
         "success": True,
-        "message": "Şifre sıfırlama kodu gönderildi"
+        "message": "Şifre sıfırlama kodu e-posta adresinize gönderildi"
     }
 
 

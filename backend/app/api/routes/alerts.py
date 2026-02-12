@@ -18,10 +18,29 @@ data_fetcher = DataFetcher()
 
 class AlertCreate(BaseModel):
     type: str  # 'price', 'score', 'signal', 'position'
-    ticker: str
-    condition: Dict[str, Any]
+    ticker: Optional[str] = None
+    symbol: Optional[str] = None  # Android sends 'symbol', map to ticker
+    condition: Optional[Dict[str, Any]] = None
+    target_price: Optional[float] = None  # Android sends target_price directly
     notification: Optional[Dict[str, bool]] = None
     priority: Optional[str] = 'medium'  # low, medium, high, critical
+    
+    @property
+    def resolved_ticker(self) -> str:
+        """Get ticker from either ticker or symbol field"""
+        t = self.ticker or self.symbol or ""
+        if t and not t.endswith(".IS"):
+            t = f"{t}.IS"
+        return t
+    
+    @property
+    def resolved_condition(self) -> Dict[str, Any]:
+        """Build condition from either condition dict or target_price"""
+        if self.condition:
+            return self.condition
+        if self.target_price:
+            return {"price_above": self.target_price}
+        return {}
 
 
 @router.post("/create")
@@ -37,8 +56,8 @@ async def create_alert(alert: AlertCreate):
     try:
         alert_id = alert_manager.create_alert(
             alert_type=alert.type,
-            ticker=alert.ticker,
-            condition=alert.condition,
+            ticker=alert.resolved_ticker,
+            condition=alert.resolved_condition,
             notification=alert.notification,
             priority=alert.priority or 'medium'
         )
@@ -151,9 +170,18 @@ async def delete_alert(alert_id: str):
 
 
 @router.put("/{alert_id}/toggle")
-async def toggle_alert(alert_id: str, active: bool):
-    """Alert'i aktif/pasif yap"""
+async def toggle_alert(alert_id: str, active: Optional[bool] = None):
+    """Alert'i aktif/pasif yap. If active is not provided, toggles current state."""
     try:
+        if active is None:
+            # Toggle: get current state and flip it
+            alerts = alert_manager.get_active_alerts()
+            current_alert = next((a for a in alerts if a.get('id') == alert_id), None)
+            if current_alert:
+                active = not current_alert.get('active', True)
+            else:
+                active = False
+        
         success = alert_manager.toggle_alert(alert_id, active)
         
         if success:
