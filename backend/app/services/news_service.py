@@ -9,6 +9,12 @@ import xml.etree.ElementTree as ET
 from loguru import logger
 import re
 import html
+import time
+
+# In-memory news cache (avoid repeated slow RSS fetches on Render)
+_news_cache: Dict[str, Dict] = {}
+_news_cache_time: Dict[str, float] = {}
+NEWS_CACHE_TTL = 600  # 10 minutes
 
 # RSS Feed kaynakları
 ECONOMY_FEEDS = {
@@ -72,7 +78,7 @@ async def fetch_rss_feed(session: aiohttp.ClientSession, feed: Dict) -> List[Dic
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
-        async with session.get(feed["url"], headers=headers, timeout=10) as response:
+        async with session.get(feed["url"], headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as response:
             if response.status != 200:
                 logger.warning(f"Failed to fetch {feed['name']}: {response.status}")
                 return []
@@ -170,25 +176,53 @@ async def fetch_all_news(feeds: Dict[str, List[Dict]]) -> Dict[str, List[Dict]]:
 
 
 async def get_economy_news() -> Dict:
-    """Ekonomi haberlerini getir"""
-    news = await fetch_all_news(ECONOMY_FEEDS)
-    return {
+    """Ekonomi haberlerini getir (cached)"""
+    cache_key = "economy"
+    now = time.time()
+    if cache_key in _news_cache and (now - _news_cache_time.get(cache_key, 0)) < NEWS_CACHE_TTL:
+        logger.debug("Returning cached economy news")
+        return _news_cache[cache_key]
+    
+    try:
+        news = await asyncio.wait_for(fetch_all_news(ECONOMY_FEEDS), timeout=15)
+    except asyncio.TimeoutError:
+        logger.warning("Economy news fetch timed out, returning cached/demo data")
+        return _news_cache.get(cache_key, DEMO_ECONOMY_NEWS)
+    
+    result = {
         "type": "economy",
         "turkey": news["turkey"],
         "world": news["world"],
         "last_updated": datetime.now().isoformat()
     }
+    _news_cache[cache_key] = result
+    _news_cache_time[cache_key] = now
+    return result
 
 
 async def get_general_news() -> Dict:
-    """Genel haberleri getir"""
-    news = await fetch_all_news(GENERAL_FEEDS)
-    return {
+    """Genel haberleri getir (cached)"""
+    cache_key = "general"
+    now = time.time()
+    if cache_key in _news_cache and (now - _news_cache_time.get(cache_key, 0)) < NEWS_CACHE_TTL:
+        logger.debug("Returning cached general news")
+        return _news_cache[cache_key]
+    
+    try:
+        news = await asyncio.wait_for(fetch_all_news(GENERAL_FEEDS), timeout=15)
+    except asyncio.TimeoutError:
+        logger.warning("General news fetch timed out, returning cached/demo data")
+        return _news_cache.get(cache_key, DEMO_GENERAL_NEWS)
+    
+    result = {
         "type": "general",
         "turkey": news["turkey"],
         "world": news["world"],
         "last_updated": datetime.now().isoformat()
     }
+    _news_cache[cache_key] = result
+    _news_cache_time[cache_key] = now
+    return result
 
 
 # Demo data for fallback

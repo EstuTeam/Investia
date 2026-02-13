@@ -31,14 +31,19 @@ data class ChatResponseDto(
 
 // ===== Chat Room =====
 data class ChatRoomListDto(
-    val rooms: List<ChatRoomDto> = emptyList()
+    val success: Boolean = true,
+    val rooms: List<ChatRoomDto> = emptyList(),
+    @SerializedName("total_online") val totalOnline: Int = 0
 )
 
 data class ChatRoomDto(
     val id: String = "",
     val name: String = "",
     val description: String = "",
+    val icon: String = "",
+    val category: String = "",
     @SerializedName("member_count") val memberCount: Int = 0,
+    @SerializedName("is_active") val isActive: Boolean = true,
     @SerializedName("last_message") val lastMessage: String = "",
     @SerializedName("last_message_time") val lastMessageTime: String = ""
 ) {

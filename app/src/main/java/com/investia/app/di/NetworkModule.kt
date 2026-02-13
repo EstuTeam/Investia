@@ -138,7 +138,7 @@ object NetworkModule {
             var lastException: IOException? = null
 
             var retryCount = 0
-            val maxRetries = 2
+            val maxRetries = 3
 
             while (retryCount <= maxRetries) {
                 try {
@@ -155,8 +155,8 @@ object NetworkModule {
                 }
 
                 retryCount++
-                // Exponential backoff: 500ms, 1000ms
-                try { Thread.sleep(500L * retryCount) } catch (_: InterruptedException) {}
+                // Exponential backoff: 1s, 2s, 4s
+                try { Thread.sleep(1000L * retryCount) } catch (_: InterruptedException) {}
             }
 
             response ?: throw (lastException ?: IOException("Bağlantı kurulamadı"))
@@ -187,9 +187,9 @@ object NetworkModule {
                     HttpLoggingInterceptor.Level.NONE
                 }
             })
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
-            .writeTimeout(20, TimeUnit.SECONDS)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
     }

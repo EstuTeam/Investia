@@ -55,13 +55,17 @@ data class AuthDataDto(
 data class UserDto(
     val id: String = "",
     val email: String = "",
-    @SerializedName("full_name") val fullName: String = "",
-    @SerializedName("is_active") val isActive: Boolean = true
+    @SerializedName("full_name") val fullNameSnake: String = "",
+    val fullName: String = "",
+    @SerializedName("is_active") val isActiveSnake: Boolean = true,
+    val isActive: Boolean = true,
+    @SerializedName("is_verified") val isVerified: Boolean = false,
+    val membership: String = "free"
 ) {
     fun toDomain() = AuthUser(
         id = id,
         email = email,
-        fullName = fullName,
-        isActive = isActive
+        fullName = fullName.ifBlank { fullNameSnake },
+        isActive = isActive && isActiveSnake
     )
 }
