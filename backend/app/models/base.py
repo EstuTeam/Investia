@@ -9,6 +9,8 @@ from sqlalchemy.pool import StaticPool, QueuePool
 from app.config import settings
 from app.utils.logger import logger
 import os
+import ssl
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 # Database URL handling
 DATABASE_URL = settings.database_url
@@ -17,15 +19,21 @@ DATABASE_URL = settings.database_url
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# SSL mode for Neon (required)
-if "neon" in DATABASE_URL.lower() and "sslmode" not in DATABASE_URL:
-    separator = "&" if "?" in DATABASE_URL else "?"
-    DATABASE_URL = f"{DATABASE_URL}{separator}sslmode=require"
-
 # Create engine based on database type
 engine = None
 SessionLocal = None
 Base = declarative_base()
+
+
+def _strip_sslmode_from_url(url: str) -> str:
+    """Remove sslmode and channel_binding from URL query params (pg8000 handles SSL via ssl_context)"""
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    params.pop("sslmode", None)
+    params.pop("channel_binding", None)
+    new_query = urlencode({k: v[0] for k, v in params.items()}) if params else ""
+    return urlunparse(parsed._replace(query=new_query))
+
 
 def _init_database():
     """Lazy database initialization to avoid startup crashes"""
@@ -45,17 +53,29 @@ def _init_database():
             logger.info("Using SQLite database for development")
         else:
             # PostgreSQL - for production (Neon)
-            # Try pg8000 driver first (pure Python, works on Vercel)
-            # then fall back to psycopg2
             pg_url = DATABASE_URL
+            connect_args = {}
+            use_pg8000 = False
+            
             try:
-                # Test with pg8000 first
-                import pg8000
+                import pg8000  # noqa: F401
+                use_pg8000 = True
+                # pg8000 doesn't support sslmode as URL param — use ssl_context
+                pg_url = _strip_sslmode_from_url(pg_url)
                 if "postgresql://" in pg_url and "+pg8000" not in pg_url:
                     pg_url = pg_url.replace("postgresql://", "postgresql+pg8000://", 1)
-                logger.info("Using pg8000 driver for PostgreSQL")
+                # Create SSL context for Neon (required)
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                connect_args["ssl_context"] = ssl_context
+                logger.info("Using pg8000 driver for PostgreSQL (SSL enabled)")
             except ImportError:
-                logger.info("pg8000 not available, using psycopg2")
+                logger.info("pg8000 not available, trying psycopg2")
+                # psycopg2 supports sslmode in URL natively — ensure it's present
+                if "neon" in pg_url.lower() and "sslmode" not in pg_url:
+                    separator = "&" if "?" in pg_url else "?"
+                    pg_url = f"{pg_url}{separator}sslmode=require"
             
             engine = create_engine(
                 pg_url,
@@ -64,7 +84,8 @@ def _init_database():
                 max_overflow=settings.database_max_overflow,
                 pool_timeout=settings.database_pool_timeout,
                 pool_recycle=settings.database_pool_recycle,
-                pool_pre_ping=True,  # Connection health check
+                pool_pre_ping=True,
+                connect_args=connect_args,
                 echo=settings.log_level.upper() == "DEBUG"
             )
             logger.info("Using PostgreSQL database for production")
